@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
+import { HederaTxStatus } from "@/components/hedera-tx-status";
 
 const DEPOSIT_AMOUNT = 50;
 
@@ -36,19 +37,15 @@ export function SimulateDepositButton() {
         variant="default"
         className="w-full"
       >
-        {deposit.isPending ? "Processing on Hedera..." : `Simulate ${DEPOSIT_AMOUNT} HBAR Deposit`}
+        {deposit.isPending ? "Processing..." : `Simulate ${DEPOSIT_AMOUNT} HBAR Deposit`}
       </Button>
 
-      {lastTx && (
-        <a
-          href={lastTx.hashscanLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-blue-600 dark:text-blue-400 underline truncate"
-        >
-          TX: {lastTx.txId}
-        </a>
-      )}
+      <HederaTxStatus
+        isPending={deposit.isPending}
+        txId={lastTx?.txId}
+        hashscanLink={lastTx?.hashscanLink}
+        error={deposit.error?.message}
+      />
     </div>
   );
 }
