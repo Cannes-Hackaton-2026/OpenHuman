@@ -63,8 +63,9 @@ describe("verifyAgentRequest — mock mode", () => {
     const identity = await verifyAgentRequest(VALID_HEADER);
 
     expect(identity.walletAddress).toBe(VALID_WALLET);
-    expect(identity.humanOwnerNullifier).toBeNull();
-    expect(identity.agentBookVerified).toBe(false);
+    // Story 2.2: mock mode now returns a deterministic AgentBook nullifier
+    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-AbCd1234");
+    expect(identity.agentBookVerified).toBe(true);
   });
 
   it("still throws AgentAuthError on malformed header in mock mode", async () => {
@@ -74,6 +75,58 @@ describe("verifyAgentRequest — mock mode", () => {
     await expect(
       verifyAgentRequest("not-a-valid-header")
     ).rejects.toBeInstanceOf(AgentAuthError);
+  });
+});
+
+describe("lookupAgentBookOwner — mock mode", () => {
+  it("returns a deterministic nullifier based on wallet address", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
+
+    const result = await lookupAgentBookOwner(VALID_WALLET);
+    // slice(2, 10) skips "0x", takes 8 chars: "AbCd1234"
+    expect(result).toBe("mock-owner-nullifier-AbCd1234");
+  });
+
+  it("returns same nullifier for same wallet (deterministic)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
+
+    const a = await lookupAgentBookOwner(VALID_WALLET);
+    const b = await lookupAgentBookOwner(VALID_WALLET);
+    expect(a).toBe(b);
+  });
+
+  it("returns different nullifiers for different wallets", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
+
+    const other = "0x1111111111111111111111111111111111111111";
+    const a = await lookupAgentBookOwner(VALID_WALLET);
+    const b = await lookupAgentBookOwner(other);
+    expect(a).not.toBe(b);
+  });
+});
+
+describe("lookupAgentBookOwner — production mode (SDK unavailable)", () => {
+  it("returns null without throwing when SDK is not installed", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "false");
+    const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
+
+    // SDK not installed → dynamic import throws → fail-soft returns null
+    await expect(lookupAgentBookOwner(VALID_WALLET)).resolves.toBeNull();
+  });
+});
+
+describe("verifyAgentRequest — mock mode with AgentBook", () => {
+  it("returns agentBookVerified: true in mock mode (Story 2.2)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    const { verifyAgentRequest } = await import("@/lib/core/agentkit");
+
+    const identity = await verifyAgentRequest(VALID_HEADER);
+
+    expect(identity.agentBookVerified).toBe(true);
+    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-AbCd1234");
   });
 });
 
