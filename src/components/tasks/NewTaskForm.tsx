@@ -142,10 +142,10 @@ export function NewTaskForm() {
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-5 text-left">
       {/* Balance display */}
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-4 py-3 flex items-center justify-between">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Your balance</span>
-        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          {balanceData?.balance ?? 0} <span className="font-normal text-zinc-400">HBAR</span>
+      <div className="border border-zinc-800 rounded bg-zinc-900 px-4 py-3 flex items-center justify-between">
+        <span className="font-mono text-xs text-zinc-500 tracking-widest">YOUR BALANCE</span>
+        <span className="font-mono font-black text-yellow-400 text-lg">
+          {balanceData?.balance ?? 0} ℏ
         </span>
       </div>
 
@@ -153,7 +153,7 @@ export function NewTaskForm() {
       <div>
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+          className="block font-mono text-xs text-zinc-400 tracking-widest mb-1"
         >
           Task Title <span className="text-red-500">*</span>
         </label>
@@ -163,18 +163,18 @@ export function NewTaskForm() {
           value={form.title}
           onChange={(e) => handleChange("title", e.target.value)}
           placeholder='e.g. "Pick up package in Osaka"'
-          className={`w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            errors.title ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+          className={`w-full rounded border px-3 py-2 text-sm bg-zinc-900 text-zinc-50 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400 font-mono ${
+            errors.title ? "border-red-500" : "border-zinc-700 focus:border-yellow-400"
           }`}
         />
-        {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title}</p>}
+        {errors.title && <p className="mt-1 font-mono text-xs text-red-400">{errors.title}</p>}
       </div>
 
       {/* Description */}
       <div>
         <label
           htmlFor="description"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+          className="block font-mono text-xs text-zinc-400 tracking-widest mb-1"
         >
           Description <span className="text-red-500">*</span>
         </label>
@@ -184,12 +184,12 @@ export function NewTaskForm() {
           value={form.description}
           onChange={(e) => handleChange("description", e.target.value)}
           placeholder="What exactly needs to be done?"
-          className={`w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${
-            errors.description ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+          className={`w-full rounded border px-3 py-2 text-sm bg-zinc-900 text-zinc-50 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400 font-mono resize-none ${
+            errors.description ? "border-red-500" : "border-zinc-700 focus:border-yellow-400"
           }`}
         />
         {errors.description && (
-          <p className="mt-1 text-xs text-red-600">{errors.description}</p>
+          <p className="mt-1 font-mono text-xs text-red-400">{errors.description}</p>
         )}
       </div>
 
@@ -197,7 +197,7 @@ export function NewTaskForm() {
       <div>
         <label
           htmlFor="budget"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+          className="block font-mono text-xs text-zinc-400 tracking-widest mb-1"
         >
           Budget (HBAR) <span className="text-red-500">*</span>
         </label>
@@ -209,13 +209,13 @@ export function NewTaskForm() {
           value={form.budget_hbar}
           onChange={(e) => handleChange("budget_hbar", e.target.value)}
           placeholder="15"
-          className={`w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            errors.budget_hbar ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+          className={`w-full rounded border px-3 py-2 text-sm bg-zinc-900 text-zinc-50 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400 font-mono ${
+            errors.budget_hbar ? "border-red-500" : "border-zinc-700 focus:border-yellow-400"
           }`}
         />
-        <p className="mt-1 text-xs text-zinc-400">Held in Hedera escrow on task creation</p>
+        <p className="mt-1 font-mono text-xs text-zinc-600">Held in Hedera escrow on task creation</p>
         {errors.budget_hbar && (
-          <p className="mt-1 text-xs text-red-600">{errors.budget_hbar}</p>
+          <p className="mt-1 font-mono text-xs text-red-400">{errors.budget_hbar}</p>
         )}
       </div>
 
@@ -223,7 +223,7 @@ export function NewTaskForm() {
       <div>
         <label
           htmlFor="deadline"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+          className="block font-mono text-xs text-zinc-400 tracking-widest mb-1"
         >
           Deadline <span className="text-red-500">*</span>
         </label>
@@ -233,35 +233,36 @@ export function NewTaskForm() {
           value={form.deadline}
           min={new Date().toISOString().split("T")[0]}
           onChange={(e) => handleChange("deadline", e.target.value)}
-          className={`w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            errors.deadline ? "border-red-500" : "border-zinc-300 dark:border-zinc-700"
+          className={`w-full rounded border px-3 py-2 text-sm bg-zinc-900 text-zinc-50 focus:outline-none focus:ring-1 focus:ring-yellow-400 font-mono ${
+            errors.deadline ? "border-red-500" : "border-zinc-700 focus:border-yellow-400"
           }`}
         />
-        {errors.deadline && <p className="mt-1 text-xs text-red-600">{errors.deadline}</p>}
+        {errors.deadline && <p className="mt-1 font-mono text-xs text-red-400">{errors.deadline}</p>}
       </div>
 
       {/* Submit error */}
       {submitError && (
-        <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-md px-3 py-2">
+        <p className="font-mono text-xs text-red-400 border border-red-800 rounded bg-red-900/20 px-3 py-2">
           {submitError}
         </p>
       )}
 
       {/* Submit button */}
-      <Button type="submit" disabled={isDisabled} className="w-full">
-        {createTask.isPending ? "Posting…" : "Post Task & Fund Escrow"}
-      </Button>
+      <button
+        type="submit"
+        disabled={isDisabled}
+        className="w-full bg-yellow-400 text-zinc-950 font-mono font-bold text-sm tracking-widest px-4 py-3 rounded hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {createTask.isPending ? "POSTING…" : "POST BOUNTY & FUND ESCROW →"}
+      </button>
 
-      <p className="text-xs text-zinc-400 text-center">
-        By posting, you authorize escrow of the budget amount. You&apos;ll validate completion
-        before payment releases.
+      <p className="font-mono text-xs text-zinc-600 text-center leading-relaxed">
+        Budget is locked in Hedera escrow. Released to the worker when you validate completion.
       </p>
 
       {/* Simulate Deposit (demo) */}
-      <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4">
-        <p className="text-xs text-zinc-400 mb-2 text-center">
-          Need HBAR? Use the demo deposit:
-        </p>
+      <div className="border-t border-zinc-800 pt-4 flex flex-col gap-2">
+        <p className="font-mono text-xs text-zinc-600 text-center tracking-widest">NEED ℏ? USE THE DEMO FAUCET:</p>
         <SimulateDepositButton />
       </div>
     </form>

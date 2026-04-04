@@ -12,14 +12,14 @@ export default function NewTaskPage() {
 
   useEffect(() => {
     if (!isLoading && !session) {
-      router.push("/client/register");
+      router.push("/register");
     }
   }, [session, isLoading, router]);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-500 animate-pulse">Checking session...</p>
+      <div className="flex flex-col flex-1 items-center justify-center">
+        <p className="font-mono text-xs text-zinc-500 animate-pulse tracking-widest">LOADING…</p>
       </div>
     );
   }
@@ -27,34 +27,22 @@ export default function NewTaskPage() {
   if (!session) return null;
 
   return (
-    <div className="flex flex-col flex-1 items-center bg-zinc-50 dark:bg-black">
-      <main className="flex flex-col gap-6 px-6 py-16 max-w-lg w-full">
-        <div className="flex flex-col gap-2">
-          <Link
-            href="/"
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            ← Back
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Post a New Task
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            A verified human will complete it.
-          </p>
-        </div>
+    <div className="max-w-lg mx-auto w-full px-6 py-10 flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <Link href="/dashboard" className="font-mono text-xs text-zinc-500 hover:text-yellow-400 transition-colors tracking-widest">
+          ← BACK
+        </Link>
+        <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase">Post a Bounty</p>
+        <h1 className="font-mono font-black text-3xl text-zinc-50 leading-none">
+          HIRE A<br />
+          <span className="text-yellow-400">HUMAN.</span>
+        </h1>
+        <p className="text-sm text-zinc-400 leading-relaxed">
+          Describe your task. A verified human will claim it, complete it, and get paid in HBAR on validation.
+        </p>
+      </div>
 
-        {session.role === "worker" && (
-          <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-            You&apos;re registered as a worker. To post tasks, register as a client.{" "}
-            <Link href="/client/register" className="underline font-medium">
-              Register as client →
-            </Link>
-          </div>
-        )}
-
-        <NewTaskForm />
-      </main>
+      <NewTaskForm />
     </div>
   );
 }

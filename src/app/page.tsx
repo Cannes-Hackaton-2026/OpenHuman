@@ -1,64 +1,87 @@
-import Link from "next/link";
+"use client";
 
-import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { trpc } from "@/lib/trpc/client";
 
 export default function Home() {
+  const router = useRouter();
+  const { data: session, isLoading } = trpc.auth.me.useQuery();
+
+  useEffect(() => {
+    if (!isLoading && session) {
+      router.replace("/dashboard");
+    }
+  }, [session, isLoading, router]);
+
+  if (isLoading || session) return null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="flex flex-col items-center gap-10 text-center px-6 py-24 max-w-2xl">
-        <div className="flex flex-col items-center gap-4">
-          <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+    <div className="flex flex-col flex-1 bg-zinc-950">
+      {/* Hero */}
+      <section className="flex flex-col items-center justify-center text-center px-6 py-24 gap-10 max-w-4xl mx-auto w-full flex-1">
+        {/* Tag */}
+        <div className="flex items-center gap-3">
+          <span className="h-px w-8 bg-yellow-400" />
+          <span className="font-mono text-xs tracking-widest text-yellow-400 uppercase">
             ETHGlobal Cannes 2026
           </span>
-          <h1 className="text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            HumanProof
+          <span className="h-px w-8 bg-yellow-400" />
+        </div>
+
+        {/* Headline */}
+        <div className="flex flex-col gap-4">
+          <h1 className="font-mono font-black text-6xl sm:text-8xl leading-none tracking-tighter text-zinc-50">
+            HIRE<br />
+            <span className="text-yellow-400">HUMANS.</span><br />
+            NOT BOTS.
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md leading-relaxed">
-            The first marketplace where every worker is a{" "}
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-              cryptographically verified human
-            </span>
-            . Powered by World ID 4.0.
+          <p className="text-zinc-400 text-lg max-w-lg mx-auto leading-relaxed">
+            Every contractor is iris-scanned and cryptographically verified.
+            <br />
+            <span className="text-zinc-300">No bots. No fakes. Zero trust needed.</span>
           </p>
         </div>
 
-        <div className="flex w-full flex-col justify-center gap-4 sm:flex-row">
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
           <Link
             href="/register"
-            className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-yellow-400 text-zinc-950 font-mono font-black text-sm tracking-widest uppercase rounded hover:bg-yellow-300 transition-colors"
           >
-            I&apos;m a Worker
+            PROVE YOU&apos;RE HUMAN →
           </Link>
           <Link
-            href="/client/register"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "w-full sm:w-auto"
-            )}
+            href="/tasks"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 border border-zinc-700 text-zinc-400 font-mono text-sm tracking-widest uppercase rounded hover:border-zinc-500 hover:text-zinc-200 transition-colors"
           >
-            I&apos;m a Client
+            BROWSE JOBS
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">🌍</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">World ID</span>
-            <span>Orb-verified humans only</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">🤖</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">AgentKit</span>
-            <span>AI agents post tasks</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">⚡</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">Hedera</span>
-            <span>Instant HBAR payments</span>
-          </div>
+        {/* Stats bar */}
+        <div className="w-full border border-zinc-800 rounded divide-x divide-zinc-800 grid grid-cols-3 mt-4">
+          {[
+            { label: "VERIFICATION", value: "WORLD ID 4.0", sub: "Orb-level biometric" },
+            { label: "AGENTS", value: "AGENTKIT", sub: "Bots post jobs too" },
+            { label: "PAYMENTS", value: "HEDERA", sub: "HBAR escrow & release" },
+          ].map(({ label, value, sub }) => (
+            <div key={label} className="px-4 py-5 flex flex-col gap-1 text-center">
+              <span className="font-mono text-xs text-zinc-500 tracking-widest">{label}</span>
+              <span className="font-mono font-bold text-yellow-400 text-sm">{value}</span>
+              <span className="text-xs text-zinc-500">{sub}</span>
+            </div>
+          ))}
         </div>
-      </main>
+      </section>
+
+      {/* Manifesto strip */}
+      <section className="border-t border-zinc-800 bg-zinc-900/50 px-6 py-8">
+        <p className="font-mono text-xs text-zinc-500 text-center tracking-widest max-w-2xl mx-auto">
+          IN A WORLD WHERE AI AGENTS CAN HIRE, FIRE, AND PAY — THE LAST THING OF VALUE IS A VERIFIED HUMAN ON THE OTHER END.
+        </p>
+      </section>
     </div>
   );
 }

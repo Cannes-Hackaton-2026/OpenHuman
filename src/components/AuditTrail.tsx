@@ -42,23 +42,23 @@ function truncate(str: string, start = 6, end = 4): string {
 const STATUS_STYLES: Record<EventStatus, { dot: string; text: string; bg: string }> = {
   success: {
     dot: "bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-300",
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    text: "text-emerald-400",
+    bg: "bg-emerald-900/20 border border-emerald-800/50",
   },
   pending: {
     dot: "bg-amber-500 animate-pulse",
-    text: "text-amber-700 dark:text-amber-300",
-    bg: "bg-amber-50 dark:bg-amber-900/20",
+    text: "text-amber-400",
+    bg: "bg-amber-900/20 border border-amber-800/50",
   },
   inactive: {
-    dot: "bg-zinc-300 dark:bg-zinc-600",
-    text: "text-zinc-400 dark:text-zinc-500",
-    bg: "bg-zinc-50 dark:bg-zinc-800/50",
+    dot: "bg-zinc-600",
+    text: "text-zinc-500",
+    bg: "bg-zinc-800/50 border border-zinc-700/50",
   },
   warning: {
     dot: "bg-amber-500",
-    text: "text-amber-700 dark:text-amber-300",
-    bg: "bg-amber-50 dark:bg-amber-900/20",
+    text: "text-amber-400",
+    bg: "bg-amber-900/20 border border-amber-800/50",
   },
 };
 
@@ -160,17 +160,15 @@ export function AuditTrail(props: AuditTrailProps) {
   const totalCount = events.length;
 
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+    <div className="border border-zinc-800 rounded bg-zinc-900 overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            Audit Trail
-          </span>
-          <span className="text-xs text-zinc-500">
-            {successCount}/{totalCount} verified
+          <span className="font-mono text-xs font-bold text-zinc-400 tracking-widest">AUDIT TRAIL</span>
+          <span className="font-mono text-xs text-zinc-600">
+            {successCount}/{totalCount}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -184,15 +182,15 @@ export function AuditTrail(props: AuditTrailProps) {
             ))}
           </div>
           {expanded ? (
-            <ChevronUp className="h-4 w-4 text-zinc-400" />
+            <ChevronUp className="h-4 w-4 text-zinc-500" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-zinc-400" />
+            <ChevronDown className="h-4 w-4 text-zinc-500" />
           )}
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-3 space-y-2">
+        <div className="border-t border-zinc-800 px-4 py-3 space-y-2">
           {events.map((event, i) => {
             const style = STATUS_STYLES[event.status];
             return (
@@ -200,35 +198,29 @@ export function AuditTrail(props: AuditTrailProps) {
                 <div className="flex flex-col items-center pt-0.5">
                   <span className={`h-2.5 w-2.5 rounded-full ${style.dot} flex-shrink-0`} />
                   {i < events.length - 1 && (
-                    <span className="w-px h-full min-h-[16px] bg-zinc-200 dark:bg-zinc-700" />
+                    <span className="w-px h-full min-h-[16px] bg-zinc-700" />
                   )}
                 </div>
 
-                <div className={`flex-1 rounded-md px-3 py-2 ${style.bg}`}>
+                <div className={`flex-1 rounded px-3 py-2 ${style.bg}`}>
                   <div className="flex items-center gap-2">
                     <span className={style.text}>{event.icon}</span>
-                    <span className={`text-xs font-medium ${style.text}`}>
+                    <span className={`font-mono text-xs font-medium ${style.text}`}>
                       {event.label}
                     </span>
                     {event.status === "success" && (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        Verified
-                      </span>
+                      <span className="font-mono text-xs text-emerald-400 font-bold">VERIFIED</span>
                     )}
                     {event.status === "pending" && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        Pending
-                      </span>
+                      <span className="font-mono text-xs text-amber-400 font-bold">PENDING</span>
                     )}
                     {event.status === "warning" && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        Caution
-                      </span>
+                      <span className="font-mono text-xs text-amber-400 font-bold">CAUTION</span>
                     )}
                   </div>
                   {event.detail && (
                     <div className="mt-1 flex items-center gap-1">
-                      <span className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+                      <span className="font-mono text-xs text-zinc-500">
                         {event.detail}
                       </span>
                       {event.link && (
@@ -236,7 +228,7 @@ export function AuditTrail(props: AuditTrailProps) {
                           href={event.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+                          className="text-yellow-400 hover:text-yellow-300"
                         >
                           <ExternalLink className="h-3 w-3" />
                         </a>

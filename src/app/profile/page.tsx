@@ -21,8 +21,8 @@ export default function ProfilePage() {
 
   if (sessionLoading || profileLoading) {
     return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-500 animate-pulse">Loading profile...</p>
+      <div className="flex flex-col flex-1 items-center justify-center">
+        <p className="font-mono text-xs text-zinc-500 animate-pulse tracking-widest">LOADING…</p>
       </div>
     );
   }
@@ -30,40 +30,45 @@ export default function ProfilePage() {
   if (!session || !profile) return null;
 
   return (
-    <div className="flex flex-col flex-1 bg-zinc-50 dark:bg-black">
-      <div className="max-w-2xl mx-auto w-full px-6 py-12 flex flex-col gap-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">My Profile</h1>
-          <Link
-            href="/tasks"
-            className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-          >
-            ← Back to tasks
-          </Link>
+    <div className="max-w-lg mx-auto w-full px-6 py-10 flex flex-col gap-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase mb-1">Identity</p>
+          <h1 className="font-mono font-black text-3xl text-zinc-50 leading-none">
+            MY<br />
+            <span className="text-yellow-400">PROFILE.</span>
+          </h1>
         </div>
+        <Link href="/tasks" className="font-mono text-xs text-zinc-500 hover:text-yellow-400 transition-colors tracking-widest">
+          ← JOBS
+        </Link>
+      </div>
 
-        {/* Verification card */}
-        <HumanVerifiedBadge
-          nullifier={profile.nullifier}
-          role={profile.role}
-          tasksCompleted={profile.tasksCompleted}
-          hbarBalance={profile.hbarBalance}
-        />
+      <HumanVerifiedBadge
+        nullifier={profile.nullifier}
+        role={profile.role}
+        tasksCompleted={profile.tasksCompleted}
+        hbarBalance={profile.hbarBalance}
+      />
 
-        {/* Reputation detail */}
-        {profile.tasksCompleted > 0 && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center">
-            🏆 {profile.tasksCompleted} task{profile.tasksCompleted !== 1 ? "s" : ""} completed —
-            your reputation is on-chain via your World ID nullifier.
+      <div className="border border-zinc-800 rounded bg-zinc-900 px-5 py-4 flex flex-col gap-3">
+        <p className="font-mono text-xs text-zinc-500 tracking-widest">REPUTATION</p>
+        {profile.tasksCompleted > 0 ? (
+          <p className="text-sm text-zinc-300 leading-relaxed">
+            <span className="text-yellow-400 font-mono font-bold">{profile.tasksCompleted}</span> task{profile.tasksCompleted !== 1 ? "s" : ""} completed —
+            your track record is tied to your World ID nullifier, not to a username. Unfakeable.
+          </p>
+        ) : (
+          <p className="text-sm text-zinc-500 leading-relaxed">
+            No tasks completed yet. Claim a bounty to start building your verified reputation.
           </p>
         )}
-
-        {profile.tasksCompleted === 0 && (
-          <p className="text-sm text-zinc-400 dark:text-zinc-500 text-center">
-            Complete your first task to start building your verified reputation.
-          </p>
-        )}
+        <Link
+          href="/tasks"
+          className="inline-flex items-center justify-center px-5 py-3 bg-yellow-400 text-zinc-950 font-mono font-bold text-sm tracking-widest rounded hover:bg-yellow-300 transition-colors"
+        >
+          BROWSE BOUNTIES →
+        </Link>
       </div>
     </div>
   );

@@ -4,9 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
-import { SimulateDepositButton } from "@/components/simulate-deposit-button";
 import { TaskCard } from "@/components/tasks/TaskCard";
-import { HumanVerifiedBadge } from "@/components/identity/HumanVerifiedBadge";
 
 type BudgetFilter = "all" | "lt10" | "gt10";
 
@@ -21,10 +19,10 @@ export default function TasksPage() {
     enabled: !!session,
   });
   const { data: myTasks = [] } = trpc.task.myTasks.useQuery(undefined, {
-    enabled: !!session && session.role === "worker",
+    enabled: !!session,
   });
   const { data: myPostedTasks = [] } = trpc.task.myPostedTasks.useQuery(undefined, {
-    enabled: !!session && session.role === "client",
+    enabled: !!session,
   });
 
   const [budgetFilter, setBudgetFilter] = useState<BudgetFilter>("all");
@@ -37,8 +35,8 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-500 animate-pulse">Checking session...</p>
+      <div className="flex flex-col flex-1 items-center justify-center">
+        <p className="font-mono text-xs text-zinc-500 animate-pulse tracking-widest">LOADING…</p>
       </div>
     );
   }
@@ -52,119 +50,101 @@ export default function TasksPage() {
   });
 
   const filterPills: { label: string; value: BudgetFilter }[] = [
-    { label: "All", value: "all" },
-    { label: "< 10 HBAR", value: "lt10" },
-    { label: "> 10 HBAR", value: "gt10" },
+    { label: "ALL", value: "all" },
+    { label: "< 10 ℏ", value: "lt10" },
+    { label: "> 10 ℏ", value: "gt10" },
   ];
 
   return (
-    <div className="flex flex-col flex-1 items-start bg-zinc-50 dark:bg-black">
-      <main className="flex flex-col gap-8 px-6 py-12 max-w-2xl w-full mx-auto">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Task Marketplace
-            </h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              Welcome, {session.nullifier.slice(0, 12)}…
-            </p>
+    <div className="max-w-3xl mx-auto w-full px-6 py-10 flex flex-col gap-10">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase mb-1">Bounty Board</p>
+          <h1 className="font-mono font-black text-3xl text-zinc-50 tracking-tight leading-none">
+            OPEN<br />
+            <span className="text-yellow-400">BOUNTIES.</span>
+          </h1>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="border border-zinc-800 rounded bg-zinc-900 px-4 py-3 text-right">
+            <p className="font-mono text-xs text-zinc-500 tracking-widest">YOUR BALANCE</p>
+            <p className="font-mono font-black text-yellow-400 text-xl">{balanceData?.balance ?? 0} ℏ</p>
           </div>
-          <div className="flex items-center gap-3">
-            <HumanVerifiedBadge
-              nullifier={session.nullifier}
-              role={session.role}
-              tasksCompleted={0}
-              hbarBalance={0}
-              compact
-            />
+          <Link
+            href="/client/new-task"
+            className="font-mono text-xs text-zinc-400 hover:text-yellow-400 transition-colors tracking-widest"
+          >
+            + POST A JOB →
+          </Link>
+        </div>
+      </div>
+
+      {/* Open bounties */}
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase">Available Now</p>
+          <div className="flex gap-2">
+            {filterPills.map((pill) => (
+              <button
+                key={pill.value}
+                onClick={() => setBudgetFilter(pill.value)}
+                className={`font-mono px-3 py-1 rounded text-xs transition-colors ${
+                  budgetFilter === pill.value
+                    ? "bg-yellow-400 text-zinc-950 font-bold"
+                    : "border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tasksLoading ? (
+          <p className="font-mono text-xs text-zinc-500 animate-pulse tracking-widest">SCANNING BOARD…</p>
+        ) : filteredTasks.length === 0 ? (
+          <div className="border border-zinc-800 rounded bg-zinc-900 p-8 text-center">
+            <p className="font-mono text-xs text-zinc-500 tracking-widest">NO BOUNTIES POSTED YET.</p>
             <Link
-              href="/profile"
-              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors underline underline-offset-2"
+              href="/client/new-task"
+              className="inline-block mt-3 font-mono text-xs text-yellow-400 hover:text-yellow-300 tracking-widest"
             >
-              My profile
+              BE THE FIRST TO POST →
             </Link>
           </div>
-        </div>
-
-        {/* Balance & Deposit Section */}
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Your Balance</p>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-              {balanceData?.balance ?? 0}{" "}
-              <span className="text-base font-normal text-zinc-400">HBAR</span>
-            </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filteredTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
           </div>
-          <SimulateDepositButton />
-        </div>
+        )}
+      </section>
 
-        {/* Available Tasks */}
-        <section>
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Available Tasks
-            </h2>
-            {/* Budget filter pills */}
-            <div className="flex gap-2">
-              {filterPills.map((pill) => (
-                <button
-                  key={pill.value}
-                  onClick={() => setBudgetFilter(pill.value)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    budgetFilter === pill.value
-                      ? "bg-indigo-600 text-white"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                  }`}
-                >
-                  {pill.label}
-                </button>
-              ))}
-            </div>
+      {/* My active jobs */}
+      {myTasks.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase">Jobs You&apos;re Working</p>
+          <div className="flex flex-col gap-3">
+            {myTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
           </div>
-
-          {tasksLoading ? (
-            <p className="text-sm text-zinc-500 animate-pulse">Loading tasks...</p>
-          ) : filteredTasks.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No tasks available right now. New tasks are posted frequently — check back soon.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {filteredTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          )}
         </section>
+      )}
 
-        {/* My Claimed Tasks — workers only */}
-        {session.role === "worker" && myTasks.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
-              My Claimed Tasks
-            </h2>
-            <div className="flex flex-col gap-3">
-              {myTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* My Posted Tasks — clients only */}
-        {session.role === "client" && myPostedTasks.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
-              My Posted Tasks
-            </h2>
-            <div className="flex flex-col gap-3">
-              {myPostedTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </section>
-        )}
-      </main>
+      {/* My posted jobs */}
+      {myPostedTasks.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest uppercase">Jobs You Posted</p>
+          <div className="flex flex-col gap-3">
+            {myPostedTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

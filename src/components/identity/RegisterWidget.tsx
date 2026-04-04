@@ -12,10 +12,8 @@ import { AlreadyRegisteredPanel } from "@/components/identity/AlreadyRegisteredP
 const isMock = process.env.NEXT_PUBLIC_MOCK_WORLDID === "true";
 
 export function RegisterWidget({
-  role = "worker",
-  redirectTo = "/tasks",
+  redirectTo = "/dashboard",
 }: {
-  role?: "worker" | "client";
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -77,9 +75,8 @@ export function RegisterWidget({
     try {
       await registerMutation.mutateAsync({
         rp_id: "mock-rp-id",
-        // Added Math.random() for better entropy in mock nullifier generation
         idkit_response: { mock: true, action: "register", timestamp: Date.now() + Math.random() },
-        role,
+        role: "worker",
       });
       router.push(redirectTo);
     } catch (err) {
@@ -115,7 +112,7 @@ export function RegisterWidget({
       await registerMutation.mutateAsync({
         rp_id: rpContext.rp_id,
         idkit_response: result,
-        role,
+        role: "worker",
       });
     } catch (err) {
       handleRegisterError(err);

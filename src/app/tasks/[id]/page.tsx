@@ -5,6 +5,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { STATUS_COLORS } from "@/lib/constants";
 import { AuditTrail } from "@/components/AuditTrail";
+import { hashscanUrl } from "@/lib/core/hashscan";
 
 function getTaskActionError(
   action: "claim" | "markComplete" | "validate",
@@ -13,44 +14,24 @@ function getTaskActionError(
   const normalized = message.toLowerCase();
 
   if (action === "claim") {
-    if (normalized.includes("already claimed")) {
-      return "Someone else just claimed this task. Refreshing...";
-    }
-    if (normalized.includes("only workers")) {
-      return "Only workers can claim tasks.";
-    }
+    if (normalized.includes("already claimed")) return "Someone else just claimed this task. Refreshing...";
     return "Failed to claim task. Please try again.";
   }
 
   if (action === "markComplete") {
-    if (normalized.includes("assigned worker")) {
-      return "Only the assigned worker can mark this task complete.";
-    }
-    if (normalized.includes("claimed status")) {
-      return "This task can no longer be marked complete.";
-    }
+    if (normalized.includes("assigned worker")) return "Only the assigned worker can mark this task complete.";
+    if (normalized.includes("claimed status")) return "This task can no longer be marked complete.";
     return "Failed to submit completion. Please try again.";
   }
 
-  if (normalized.includes("task client")) {
-    return "Only the task client can validate this task.";
-  }
-  if (normalized.includes("completed status")) {
-    return "This task is not ready for validation yet.";
-  }
-  if (normalized.includes("already released")) {
-    return "Payment has already been released for this task.";
-  }
-  if (normalized.includes("mcp api")) {
-    return "Agent-posted tasks must be validated via the MCP API.";
-  }
+  if (normalized.includes("task client")) return "Only the task client can validate this task.";
+  if (normalized.includes("completed status")) return "This task is not ready for validation yet.";
+  if (normalized.includes("already released")) return "Payment has already been released for this task.";
+  if (normalized.includes("mcp api")) return "Agent-posted tasks must be validated via the MCP API.";
 
   return "Failed to release payment. Please try again.";
 }
 
-/**
- * Task detail page showing full description, escrow status, and worker/client actions.
- */
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const utils = trpc.useUtils();
@@ -60,12 +41,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     {
       refetchInterval: (query) => {
         const queryTask = query.state.data;
-        const shouldPoll =
-          session?.role === "client" &&
-          !!session.nullifier &&
-          queryTask?.status === "claimed" &&
-          queryTask.client_nullifier === session.nullifier;
-        return shouldPoll ? 5000 : false;
+        const isMyTask =
+          session?.nullifier &&
+          queryTask?.client_nullifier === session.nullifier &&
+          queryTask?.status === "claimed";
+        return isMyTask ? 5000 : false;
       },
     }
   );
@@ -84,21 +64,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const { mutate: claimTask, isPending: isClaiming } = trpc.task.claim.useMutation({
-    onSuccess: () => {
-      utils.task.get.invalidate({ id });
-    },
-    onError: (err) => {
-      setClaimError(getTaskActionError("claim", err.message));
-    },
+    onSuccess: () => utils.task.get.invalidate({ id }),
+    onError: (err) => setClaimError(getTaskActionError("claim", err.message)),
   });
 
   const { mutate: markComplete, isPending: isMarkingComplete } = trpc.task.markComplete.useMutation({
-    onSuccess: () => {
-      utils.task.get.invalidate({ id });
-    },
-    onError: (err) => {
-      setMarkCompleteError(getTaskActionError("markComplete", err.message));
-    },
+    onSuccess: () => utils.task.get.invalidate({ id }),
+    onError: (err) => setMarkCompleteError(getTaskActionError("markComplete", err.message)),
   });
 
   const { mutate: validateTask, isPending: isValidating } = trpc.task.validate.useMutation({
@@ -112,44 +84,39 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         .then(({ default: confetti }) => {
           confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
         })
-        .catch(() => {
-          // Confetti is cosmetic. Do not block the validated-state refresh if it fails to load.
-        });
+        .catch(() => {});
     },
-    onError: (err) => {
-      setValidateError(getTaskActionError("validate", err.message));
-    },
+    onError: (err) => setValidateError(getTaskActionError("validate", err.message)),
   });
 
   if (isLoading) {
     return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-500 animate-pulse">Loading task...</p>
+      <div className="flex flex-col flex-1 items-center justify-center">
+        <p className="font-mono text-xs text-zinc-500 animate-pulse tracking-widest">LOADING BOUNTY…</p>
       </div>
     );
   }
 
   if (!task) {
     return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-500">Task not found or no longer available.</p>
-        <Link href="/tasks" className="mt-4 text-sm text-indigo-600 hover:underline">
-          ← Back to tasks
+      <div className="flex flex-col flex-1 items-center justify-center gap-4">
+        <p className="font-mono text-sm text-zinc-500">BOUNTY NOT FOUND.</p>
+        <Link href="/tasks" className="font-mono text-xs text-yellow-400 hover:text-yellow-300 tracking-widest">
+          ← BACK TO BOARD
         </Link>
       </div>
     );
   }
 
   const deadline = new Date(task.deadline);
-  const deadlineStr = deadline.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const deadlineStr = deadline.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  const myNullifier = session?.nullifier ?? null;
+  const isWorker = task.worker_nullifier === myNullifier;
+  const isClient = task.client_nullifier === myNullifier;
+
   const showRecentValidationSuccess =
-    task.status === "validated" &&
-    !!recentValidation &&
-    recentValidation.paymentTxId === task.payment_tx_id;
+    task.status === "validated" && !!recentValidation && recentValidation.paymentTxId === task.payment_tx_id;
   const paymentLink =
     showRecentValidationSuccess && recentValidation.hashscanLink
       ? recentValidation.hashscanLink
@@ -158,158 +125,145 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         : "";
 
   return (
-    <div className="flex flex-col flex-1 items-center bg-zinc-50 dark:bg-black">
-      <main className="flex flex-col gap-6 px-6 py-16 max-w-lg w-full">
-        <Link href="/tasks" className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
-          ← Back to tasks
-        </Link>
+    <div className="max-w-2xl mx-auto w-full px-6 py-10 flex flex-col gap-8">
+      <Link href="/tasks" className="font-mono text-xs text-zinc-500 hover:text-yellow-400 transition-colors tracking-widest">
+        ← BACK TO BOARD
+      </Link>
 
-        <div className="flex items-start gap-3">
-          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_COLORS[task.status] ?? "bg-zinc-100 text-zinc-600"}`}>
-            {task.status.toUpperCase()}
-          </span>
-        </div>
-
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+      {/* Title + status */}
+      <div className="flex flex-col gap-3">
+        <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full w-fit ${STATUS_COLORS[task.status] ?? "bg-zinc-800 text-zinc-400"}`}>
+          {task.status.toUpperCase()}
+        </span>
+        <h1 className="font-mono font-black text-2xl text-zinc-50 leading-tight">
           {task.title}
         </h1>
+      </div>
 
-        <div className="flex gap-3 flex-wrap">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-center">
-            <p className="text-xs text-zinc-500">Budget</p>
-            <p className="text-lg font-bold text-indigo-600">{task.budget_hbar} <span className="text-sm font-normal text-zinc-400">HBAR</span></p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-center">
-            <p className="text-xs text-zinc-500">Deadline</p>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{deadlineStr}</p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-center">
-            <p className="text-xs text-zinc-500">Client</p>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              {task.client_type === "agent" ? "🤖 Agent" : "👤 Human"}
-            </p>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="border border-zinc-800 rounded bg-zinc-900 px-4 py-3 text-center">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest">BOUNTY</p>
+          <p className="font-mono font-black text-yellow-400 text-xl">{task.budget_hbar} ℏ</p>
         </div>
-
-        <div>
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Description</p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{task.description}</p>
+        <div className="border border-zinc-800 rounded bg-zinc-900 px-4 py-3 text-center">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest">DEADLINE</p>
+          <p className="font-mono text-sm text-zinc-50 font-semibold">{deadlineStr.toUpperCase()}</p>
         </div>
-
-        {/* Action section — role + status state machine */}
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-4 flex flex-col gap-3">
-          {!session ? (
-            <p className="text-sm text-zinc-500">
-              Verify your identity to claim tasks.{" "}
-              <Link href="/register" className="text-indigo-600 hover:underline">
-                Verify with World ID →
-              </Link>
-            </p>
-          ) : session.role === "worker" && task.status === "open" ? (
-            <>
-              <p className="text-xs text-zinc-500">
-                Payment is held in escrow until your work is validated.
-              </p>
-              <button
-                onClick={() => { clearErrors(); claimTask({ taskId: task.id }); }}
-                disabled={isClaiming}
-                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isClaiming ? "Claiming…" : "Claim This Task"}
-              </button>
-              {claimError && <p className="text-sm text-red-600">{claimError}</p>}
-            </>
-          ) : session.role === "worker" && task.status === "claimed" && !!session.nullifier && task.worker_nullifier === session.nullifier ? (
-            <>
-              <p className="text-sm text-zinc-500">Complete the work, then tap below.</p>
-              <button
-                onClick={() => { clearErrors(); markComplete({ taskId: task.id }); }}
-                disabled={isMarkingComplete}
-                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isMarkingComplete ? "Submitting…" : "Mark as Complete"}
-              </button>
-              {markCompleteError && <p className="text-sm text-red-600">{markCompleteError}</p>}
-            </>
-          ) : session.role === "worker" && task.status === "completed" && !!session.nullifier && task.worker_nullifier === session.nullifier ? (
-            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2">
-              <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">
-                ✅ Completion submitted! Awaiting client validation.
-              </p>
-            </div>
-          ) : session.role === "worker" && task.status === "validated" && !!session.nullifier && task.worker_nullifier === session.nullifier ? (
-            <p className="text-sm font-medium text-emerald-600">
-              ✅ Task validated. Payment received.
-            </p>
-          ) : session.role === "worker" ? (
-            <p className="text-sm text-zinc-500">
-              This task has been claimed.{" "}
-              <Link href="/tasks" className="text-indigo-600 hover:underline">
-                Browse other available tasks →
-              </Link>
-            </p>
-          ) : session.role === "client" && !!session.nullifier && task.client_nullifier === session.nullifier ? (
-            <>
-              {task.status === "open" ? (
-                <p className="text-sm text-zinc-500 italic">
-                  Waiting for workers to claim this task...
-                </p>
-              ) : task.status === "claimed" ? (
-                <p className="text-sm text-zinc-500">
-                  ⏳ Worker is completing the task. You&apos;ll be notified when they&apos;re done.
-                </p>
-              ) : task.status === "completed" ? (
-                <>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Worker has marked this complete. Review and validate to release payment.
-                  </p>
-                  <button
-                    onClick={() => {
-                      clearErrors();
-                      setRecentValidation(null);
-                      validateTask({ taskId: task.id });
-                    }}
-                    disabled={isValidating}
-                    className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isValidating ? "Releasing payment…" : "Validate & Release"}
-                  </button>
-                  {validateError && <p className="text-sm text-red-600">{validateError}</p>}
-                </>
-              ) : task.status === "validated" ? (
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium text-emerald-600">
-                    {showRecentValidationSuccess
-                      ? "✅ Task complete. Payment released to worker."
-                      : "✅ Task complete. Payment released."}
-                  </p>
-                  {paymentLink && (
-                    <a
-                      href={paymentLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-indigo-600 hover:underline font-mono"
-                    >
-                      View payment on Hashscan ↗
-                    </a>
-                  )}
-                </div>
-              ) : null}
-            </>
-          ) : null}
+        <div className="border border-zinc-800 rounded bg-zinc-900 px-4 py-3 text-center">
+          <p className="font-mono text-xs text-zinc-500 tracking-widest">CLIENT</p>
+          <p className="font-mono text-sm font-semibold">
+            {task.client_type === "agent"
+              ? <span className="text-violet-400">BOT</span>
+              : <span className="text-emerald-400">HUMAN</span>
+            }
+          </p>
         </div>
+      </div>
 
-        <AuditTrail
-          clientType={task.client_type}
-          clientNullifier={task.client_nullifier}
-          clientAgentWallet={task.client_agent_wallet}
-          clientAgentOwnerNullifier={task.client_agent_owner_nullifier}
-          workerNullifier={task.worker_nullifier}
-          escrowTxId={task.escrow_tx_id}
-          paymentTxId={task.payment_tx_id}
-          status={task.status}
-        />
-      </main>
+      {/* Description */}
+      <div className="border border-zinc-800 rounded bg-zinc-900 px-5 py-4">
+        <p className="font-mono text-xs text-zinc-500 tracking-widest mb-2">BRIEF</p>
+        <p className="text-sm text-zinc-300 leading-relaxed">{task.description}</p>
+      </div>
+
+      {/* Action section */}
+      <div className="border border-zinc-800 rounded bg-zinc-900 px-5 py-5 flex flex-col gap-3">
+        <p className="font-mono text-xs text-zinc-500 tracking-widest">ACTION</p>
+
+        {!session ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-zinc-400">Verify your humanity to claim bounties.</p>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center px-5 py-3 bg-yellow-400 text-zinc-950 font-mono font-bold text-sm tracking-widest rounded hover:bg-yellow-300 transition-colors"
+            >
+              PROVE YOU&apos;RE HUMAN →
+            </Link>
+          </div>
+        ) : task.status === "open" && !isClient ? (
+          <>
+            <p className="text-xs text-zinc-500">Payment held in escrow. Released on validation.</p>
+            <button
+              onClick={() => { clearErrors(); claimTask({ taskId: task.id }); }}
+              disabled={isClaiming}
+              className="w-full bg-yellow-400 text-zinc-950 font-mono font-bold text-sm tracking-widest px-4 py-3 rounded hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isClaiming ? "CLAIMING…" : "CLAIM THIS BOUNTY →"}
+            </button>
+            {claimError && <p className="font-mono text-xs text-red-400">{claimError}</p>}
+          </>
+        ) : task.status === "open" && isClient ? (
+          <p className="text-sm text-zinc-500 italic">Waiting for a human to claim this bounty…</p>
+        ) : isWorker && task.status === "claimed" ? (
+          <>
+            <p className="text-xs text-zinc-500">Complete the work, then mark it done.</p>
+            <button
+              onClick={() => { clearErrors(); markComplete({ taskId: task.id }); }}
+              disabled={isMarkingComplete}
+              className="w-full bg-yellow-400 text-zinc-950 font-mono font-bold text-sm tracking-widest px-4 py-3 rounded hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isMarkingComplete ? "SUBMITTING…" : "MARK AS COMPLETE →"}
+            </button>
+            {markCompleteError && <p className="font-mono text-xs text-red-400">{markCompleteError}</p>}
+          </>
+        ) : isWorker && task.status === "completed" ? (
+          <div className="border border-emerald-800 rounded bg-emerald-900/20 px-4 py-3">
+            <p className="font-mono text-xs text-emerald-400 font-bold tracking-widest">
+              SUBMITTED — AWAITING VALIDATION
+            </p>
+          </div>
+        ) : isWorker && task.status === "validated" ? (
+          <div className="border border-emerald-800 rounded bg-emerald-900/20 px-4 py-3">
+            <p className="font-mono text-xs text-emerald-400 font-bold tracking-widest">
+              VALIDATED — PAYMENT RECEIVED
+            </p>
+          </div>
+        ) : isClient && task.status === "claimed" ? (
+          <p className="text-sm text-zinc-400">⏳ Worker is on it. You&apos;ll see an update when they&apos;re done.</p>
+        ) : isClient && task.status === "completed" ? (
+          <>
+            <p className="text-sm text-zinc-300">Worker marked it done. Review and release payment.</p>
+            <button
+              onClick={() => { clearErrors(); setRecentValidation(null); validateTask({ taskId: task.id }); }}
+              disabled={isValidating}
+              className="w-full bg-emerald-500 text-zinc-950 font-mono font-bold text-sm tracking-widest px-4 py-3 rounded hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isValidating ? "RELEASING…" : "VALIDATE & RELEASE PAYMENT →"}
+            </button>
+            {validateError && <p className="font-mono text-xs text-red-400">{validateError}</p>}
+          </>
+        ) : isClient && task.status === "validated" ? (
+          <div className="flex flex-col gap-2">
+            <p className="font-mono text-xs text-emerald-400 font-bold tracking-widest">
+              {showRecentValidationSuccess ? "PAYMENT RELEASED TO WORKER." : "TASK COMPLETE."}
+            </p>
+            {paymentLink && (
+              <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-zinc-400 hover:text-yellow-400 transition-colors">
+                VIEW ON HASHSCAN ↗
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">
+            This bounty is already claimed.{" "}
+            <Link href="/tasks" className="text-yellow-400 hover:text-yellow-300">
+              Browse others →
+            </Link>
+          </p>
+        )}
+      </div>
+
+      <AuditTrail
+        clientType={task.client_type}
+        clientNullifier={task.client_nullifier}
+        clientAgentWallet={task.client_agent_wallet}
+        clientAgentOwnerNullifier={task.client_agent_owner_nullifier}
+        workerNullifier={task.worker_nullifier}
+        escrowTxId={task.escrow_tx_id}
+        paymentTxId={task.payment_tx_id}
+        status={task.status}
+      />
     </div>
   );
 }

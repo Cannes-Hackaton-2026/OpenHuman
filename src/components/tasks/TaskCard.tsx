@@ -10,41 +10,38 @@ export function TaskCard({ task }: { task: Task }) {
   });
 
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 flex flex-col gap-3">
-      <h2 className="font-semibold text-zinc-900 dark:text-zinc-50 line-clamp-2 text-left">
-        {task.title}
-      </h2>
-
-      <div className="flex gap-3 text-sm flex-wrap">
-        <span className="text-indigo-600 font-medium">{task.budget_hbar} HBAR</span>
-        <span className="text-zinc-500">Due: {deadline}</span>
+    <Link
+      href={`/tasks/${task.id}`}
+      className="group block border border-zinc-800 hover:border-yellow-400/50 rounded bg-zinc-900 p-5 flex flex-col gap-3 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-mono font-bold text-zinc-50 group-hover:text-yellow-400 transition-colors line-clamp-2 text-sm leading-snug flex-1">
+          {task.title}
+        </h2>
+        <span className="font-mono font-black text-yellow-400 text-lg shrink-0 leading-none">
+          {task.budget_hbar} ℏ
+        </span>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           {task.client_type === "agent" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2.5 py-0.5 text-xs font-medium">
-              🤖 Autonomous Agent
+            <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-300 border border-violet-800">
+              BOT CLIENT
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-medium">
-              👤 Verified Human
+            <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 border border-emerald-800">
+              HUMAN CLIENT
             </span>
           )}
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[task.status] ?? "bg-zinc-100 text-zinc-600"}`}
+            className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[task.status] ?? "bg-zinc-800 text-zinc-400"}`}
           >
             {task.status.toUpperCase()}
           </span>
         </div>
-
-        <Link
-          href={`/tasks/${task.id}`}
-          className="text-sm text-indigo-600 hover:underline"
-        >
-          View Task →
-        </Link>
+        <span className="font-mono text-xs text-zinc-500">DUE {deadline.toUpperCase()}</span>
       </div>
-    </div>
+    </Link>
   );
 }
