@@ -121,7 +121,7 @@ Claude Code est l'outil IA qu'on utilise pour développer. Il lit le code, écri
 
 ```bash
 # Installer Claude Code (une seule fois)
-npm install -g @anthropic-ai/claude-code
+pnpm install -g @anthropic-ai/claude-code
 
 # Lancer dans le dossier du projet
 cd humanproof
