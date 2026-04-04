@@ -19,12 +19,6 @@ interface HederaTxStatusProps {
  * @param error - Error message to display if the transaction failed
  */
 export function HederaTxStatus({ isPending, txId, hashscanLink, error }: HederaTxStatusProps) {
-  if (error) {
-    return (
-      <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-    );
-  }
-
   if (isPending) {
     return (
       <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -34,8 +28,19 @@ export function HederaTxStatus({ isPending, txId, hashscanLink, error }: HederaT
     );
   }
 
-  if (txId) {
-    const link = hashscanLink ?? hashscanUrl(txId);
+  if (error) {
+    return (
+      <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+    );
+  }
+
+  const resolvedTxId = txId || undefined;
+  const link = hashscanLink ?? (resolvedTxId ? hashscanUrl(resolvedTxId) : undefined);
+
+  if (link) {
+    const truncatedId = resolvedTxId
+      ? `${resolvedTxId.slice(0, 15)}...`
+      : undefined;
     return (
       <a
         href={link}
@@ -43,7 +48,7 @@ export function HederaTxStatus({ isPending, txId, hashscanLink, error }: HederaT
         rel="noopener noreferrer"
         className="text-xs text-blue-600 dark:text-blue-400 underline truncate block"
       >
-        View on Hashscan
+        View on Hashscan{truncatedId ? ` · ${truncatedId}` : ""}
       </a>
     );
   }

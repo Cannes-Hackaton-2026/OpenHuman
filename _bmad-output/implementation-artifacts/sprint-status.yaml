@@ -77,7 +77,7 @@ development_status:
   4-2-simulate-deposit-flow-demo-robustness: done
   4-3-hedera-escrow-lock-on-task-creation: done
   4-4-hedera-payment-release-on-validation: done
-  4-5-processing-ui-with-hashscan-links: review
+  4-5-processing-ui-with-hashscan-links: done
   epic-4-retrospective: optional
 
   # Epic 5: Hackathon Demo & Operations

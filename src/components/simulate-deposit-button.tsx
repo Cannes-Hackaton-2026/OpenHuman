@@ -37,7 +37,7 @@ export function SimulateDepositButton() {
         variant="default"
         className="w-full"
       >
-        {deposit.isPending ? "Processing on Hedera..." : `Simulate ${DEPOSIT_AMOUNT} HBAR Deposit`}
+        {deposit.isPending ? "Processing..." : `Simulate ${DEPOSIT_AMOUNT} HBAR Deposit`}
       </Button>
 
       <HederaTxStatus

@@ -1,6 +1,6 @@
 # Story 4.5: Processing UI with Hashscan Links
 
-Status: review
+Status: done
 
 ## Story
 
@@ -140,3 +140,13 @@ None — clean implementation.
 - `src/lib/core/hashscan.ts` — NEW: client-safe `hashscanUrl()` utility extracted from hedera.ts
 - `src/lib/core/hedera.ts` — MODIFIED: replaced inline `hashscanUrl` with re-export from `hashscan.ts`
 - `src/components/simulate-deposit-button.tsx` — MODIFIED: refactored to use `HederaTxStatus` component
+
+### Review Findings
+
+- [x] [Review][Decision] AC #4: No error toast shown — resolved: SimulateDepositButton already has `onError` toast, kept inline in HederaTxStatus as secondary feedback
+- [x] [Review][Decision] AC #2/#3: TX ID not displayed in link — resolved: added truncated TX ID in link text (`View on Hashscan · 0.0.48...`)
+- [x] [Review][Patch] Double "Processing on Hedera..." text in SimulateDepositButton — fixed: button now shows "Processing..."
+- [x] [Review][Patch] Error checked before isPending in HederaTxStatus — fixed: isPending now checked first
+- [x] [Review][Patch] HederaTxStatus ignores hashscanLink when txId is absent — fixed: checks `hashscanLink` fallback
+- [x] [Review][Patch] HashscanLink renders broken link for empty txId — fixed: returns null for empty txId
+- [x] [Review][Defer] hashscanUrl hardcodes `testnet` — pre-existing, acceptable for hackathon [hashscan.ts:12]
