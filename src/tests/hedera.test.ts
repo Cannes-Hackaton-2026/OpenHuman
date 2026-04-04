@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { hashscanUrl, getOperatorAccountId } from "@/lib/core/hedera";
 
 describe("hashscanUrl", () => {
@@ -26,6 +26,10 @@ describe("getOperatorAccountId", () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
   it("returns the configured account ID when env vars are set", () => {

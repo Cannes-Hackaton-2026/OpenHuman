@@ -1,6 +1,6 @@
 # Story 4.1: Hedera Testnet Account & Server-Side Security
 
-Status: review
+Status: done
 
 ## Story
 
@@ -41,6 +41,16 @@ So that I can sign escrow and payment transactions securely without exposing key
   - [x] 3.3 Test `hashscanUrl()` formatting (already exists - verify coverage)
 - [x] Task 4: Verify `.env.example` has all required Hedera vars documented
   - [x] 4.1 Confirm `HEDERA_ACCOUNT_ID` and `HEDERA_PRIVATE_KEY` are present with comments
+
+### Review Findings
+
+- [x] [Review][Patch] Redundant `validateEnv()` call in `getAccountBalance` [src/lib/core/hedera.ts]
+- [x] [Review][Patch] `getPlatformBalance` missing admin role check [src/server/routers/payment.ts]
+- [x] [Review][Patch] Tests don't restore `process.env` with `afterAll` [src/tests/hedera.test.ts]
+- [x] [Review][Defer] `PrivateKey.fromStringECDSA` no fallback for wrong key format — deferred, pre-existing
+- [x] [Review][Defer] `releasePayment` no auth check + not idempotent — deferred, scope story 4.4
+- [x] [Review][Defer] `lockEscrow` not idempotent — deferred, scope story 4.3
+- [x] [Review][Defer] `simulateDeposit` DB update not atomic with Hedera TX — deferred, scope story 4.2
 
 ## Dev Notes
 

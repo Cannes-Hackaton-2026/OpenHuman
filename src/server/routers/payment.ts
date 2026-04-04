@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/lib/trpc/server";
 import { db } from "@/lib/db";
 import { tasks, users } from "@/server/db/schema";
@@ -94,7 +95,13 @@ export const paymentRouter = router({
   }),
 
   // Get platform operator account balance (admin/demo use)
-  getPlatformBalance: protectedProcedure.query(async () => {
+  getPlatformBalance: protectedProcedure.query(async ({ ctx }) => {
+    const user = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.nullifier, ctx.session.nullifier),
+    });
+    if (user?.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    }
     const balance = await getAccountBalance();
     return { accountId: getOperatorAccountId(), balance };
   }),

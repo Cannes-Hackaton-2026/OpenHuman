@@ -47,10 +47,9 @@ export function getOperatorAccountId(): string {
  */
 export async function getAccountBalance(): Promise<number> {
   const client = getClient();
-  const { accountId } = validateEnv();
 
   const balance = await new AccountBalanceQuery()
-    .setAccountId(accountId)
+    .setAccountId(getOperatorAccountId())
     .execute(client);
 
   return balance.hbars.toBigNumber().toNumber();
