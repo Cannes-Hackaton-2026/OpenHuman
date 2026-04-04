@@ -24,6 +24,7 @@ describe("Mock mode end-to-end flow", () => {
 
   it("mock verify -> create session -> verify session roundtrip", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    vi.stubEnv("SESSION_SECRET", "test-secret-1234567890abcdef");
 
     const { verifyWorldIDProof } = await import("@/lib/core/worldid");
     const { createSession, verifySession } = await import("@/lib/core/session");

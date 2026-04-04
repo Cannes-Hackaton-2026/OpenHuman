@@ -9,23 +9,25 @@ export const SESSION_COOKIE_OPTIONS = {
   path: "/",
 } as const;
 
-const secretStr = process.env.SESSION_SECRET;
-if (!secretStr) {
-  throw new Error("SESSION_SECRET is not configured");
+function getSecret(): Uint8Array {
+  const secretStr = process.env.SESSION_SECRET;
+  if (!secretStr) {
+    throw new Error("SESSION_SECRET is not configured");
+  }
+  return new TextEncoder().encode(secretStr);
 }
-const secret = new TextEncoder().encode(secretStr);
 
 export async function createSession(payload: SessionPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("24h")
-    .sign(secret);
+    .sign(getSecret());
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as SessionPayload;
   } catch {
     return null;
