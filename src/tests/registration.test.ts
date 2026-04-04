@@ -50,6 +50,7 @@ describe("verifyWorldIDProof — mock mode (registration flow)", () => {
 describe("Session lifecycle — post-registration", () => {
   it("creates a verifiable worker session after mock proof", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    vi.stubEnv("SESSION_SECRET", "test-secret-1234567890abcdef");
 
     const { verifyWorldIDProof } = await import("@/lib/core/worldid");
     const { createSession, verifySession } = await import("@/lib/core/session");
@@ -73,6 +74,7 @@ describe("Session lifecycle — post-registration", () => {
 describe("completeRegistration — registration persistence (AC #2)", () => {
   it("creates user + nullifier and returns a token on success", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    vi.stubEnv("SESSION_SECRET", "test-secret-1234567890abcdef");
 
     const mockUser = {
       id: "user-abc",
@@ -96,8 +98,11 @@ describe("completeRegistration — registration persistence (AC #2)", () => {
 
     vi.doMock("@/lib/db", () => ({
       db: {
-        query: { nullifiers: { findFirst: mockFindFirst } },
-        insert: mockInsert,
+        transaction: (cb: (tx: unknown) => unknown) =>
+          cb({
+            query: { nullifiers: { findFirst: mockFindFirst } },
+            insert: mockInsert,
+          }),
       },
     }));
 
@@ -124,8 +129,11 @@ describe("completeRegistration — registration persistence (AC #2)", () => {
 
     vi.doMock("@/lib/db", () => ({
       db: {
-        query: { nullifiers: { findFirst: mockFindFirst } },
-        insert: vi.fn(),
+        transaction: (cb: (tx: unknown) => unknown) =>
+          cb({
+            query: { nullifiers: { findFirst: mockFindFirst } },
+            insert: vi.fn(),
+          }),
       },
     }));
 
@@ -174,18 +182,22 @@ describe("protectedProcedure — rejects unauthorized requests (AC #4)", () => {
 describe("auth.register result — redirect readiness", () => {
   it("returns user id on success (client uses this to redirect to /tasks)", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
-    vi.stubEnv("SESSION_SECRET", "test-secret-12345678901234567890");
+    vi.stubEnv("SESSION_SECRET", "test-secret-1234567890abcdef");
 
     const mockUser = { id: "user-123", nullifier: "n1", role: "worker" as const };
     const mockReturning = vi.fn().mockResolvedValue([mockUser]);
-    const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: vi.fn().mockReturnValue({ returning: mockReturning }) });
-    
+    const mockValues = vi.fn().mockReturnValue({
+      onConflictDoUpdate: vi.fn().mockReturnValue({ returning: mockReturning }),
+      onConflictDoNothing: vi.fn().mockResolvedValue([]),
+    });
+
     vi.doMock("@/lib/db", () => ({
       db: {
-        transaction: (cb: any) => cb({
-          query: { nullifiers: { findFirst: vi.fn().mockResolvedValue(null) } },
-          insert: vi.fn().mockReturnValue({ values: mockValues }),
-        }),
+        transaction: (cb: (tx: unknown) => unknown) =>
+          cb({
+            query: { nullifiers: { findFirst: vi.fn().mockResolvedValue(null) } },
+            insert: vi.fn().mockReturnValue({ values: mockValues }),
+          }),
       },
     }));
 
