@@ -1,6 +1,6 @@
 # Story 2.3: Agent Task Creation API
 
-Status: review
+Status: done
 
 ## Story
 
@@ -155,6 +155,12 @@ Claude Sonnet 4.6
 - Tests sans DB (mock) — cohérent avec tous les autres tests du projet (postgres non démarré en CI)
 - `agentbook_status` inclus dans la réponse pour les juges / Story 2.4
 - 87 tests passent, 0 régressions
+- Code review patch: authenticated AgentKit wallet is now propagated through MCP request context and enforced in `create_task`
+- Targeted MCP/AgentKit tests pass with `SESSION_SECRET=test-secret`
+
+### Review Findings
+
+- [x] [Review][Patch] Authentified agent identity is not bound to `create_task`, so a caller can submit any `agent_wallet` and create tasks under another agent's wallet [`src/server/mcp/registry.ts:67`] — Fixed: authenticated wallet is now stored in request context and enforced by MCP task helpers
 
 ### File List
 
