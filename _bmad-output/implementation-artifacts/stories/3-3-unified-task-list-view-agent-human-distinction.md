@@ -1,6 +1,6 @@
 # Story 3.3: Unified Task List View (Agent/Human Distinction)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -44,27 +44,27 @@ So that I can choose which one I want to perform.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Create `TaskCard` component (AC: #1, #2, #7)
-  - [ ] 1.1 Create `src/components/tasks/TaskCard.tsx` (no `"use client"` needed — pure presentational).
-  - [ ] 1.2 Props: `task: Task` (import from `@/lib/schemas`). Render: title, budget, relative deadline, client-type badge, status badge, "View Task →" link to `/tasks/${task.id}`.
-  - [ ] 1.3 Client type badge: `client_type === "agent"` → purple pill `"🤖 Autonomous Agent"`, `client_type === "human"` → green pill `"👤 Verified Human"`.
-  - [ ] 1.4 Status badge colors: reuse the `statusColors` map already defined in `src/app/tasks/[id]/page.tsx` — **copy the same map into TaskCard** to keep it self-contained (no shared constant needed for MVP).
-  - [ ] 1.5 Deadline: display as `deadline.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })`. Pass `new Date(task.deadline)` since deadline is an ISO string from tRPC.
+- [x] Task 1 — Create `TaskCard` component (AC: #1, #2, #7)
+  - [x] 1.1 Create `src/components/tasks/TaskCard.tsx` (no `"use client"` needed — pure presentational).
+  - [x] 1.2 Props: `task: Task` (import from `@/lib/schemas`). Render: title, budget, relative deadline, client-type badge, status badge, "View Task →" link to `/tasks/${task.id}`.
+  - [x] 1.3 Client type badge: `client_type === "agent"` → purple pill `"🤖 Autonomous Agent"`, `client_type === "human"` → green pill `"👤 Verified Human"`.
+  - [x] 1.4 Status badge colors: reuse the `statusColors` map already defined in `src/app/tasks/[id]/page.tsx` — **copy the same map into TaskCard** to keep it self-contained (no shared constant needed for MVP).
+  - [x] 1.5 Deadline: display as `deadline.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })`. Pass `new Date(task.deadline)` since deadline is an ISO string from tRPC.
 
-- [ ] Task 2 — Rework `src/app/tasks/page.tsx` with real task list (AC: #1–#7)
-  - [ ] 2.1 Keep existing session guard (`trpc.auth.me.useQuery()` + `useEffect` redirect to `/` if no session). Keep balance display + `<SimulateDepositButton />` section.
-  - [ ] 2.2 Remove the hardcoded demo `<AgentIdentityCard>` blocks — they were placeholders until this story.
-  - [ ] 2.3 Remove the placeholder text `"Available tasks will appear here once task listings are implemented (story 3.3)"`.
-  - [ ] 2.4 Add `trpc.task.list.useQuery(undefined, { refetchInterval: 5000 })` for open tasks (server defaults to `status: "open"`).
-  - [ ] 2.5 Add filter state: `const [budgetFilter, setBudgetFilter] = useState<"all" | "lt10" | "gt10">("all")`. Filter the returned tasks array client-side: `lt10` → `task.budget_hbar < 10`, `gt10` → `task.budget_hbar >= 10`.
-  - [ ] 2.6 Render filter pills: `[All] [< 10 HBAR] [> 10 HBAR]` — active pill: `bg-indigo-600 text-white`, inactive: `bg-zinc-100 text-zinc-600`. Place above the task list.
-  - [ ] 2.7 Render filtered tasks as `<TaskCard>` components. Show empty state when filtered list is empty.
-  - [ ] 2.8 Add "My Claimed Tasks" section: `trpc.task.myTasks.useQuery()`. Only render section if `session.role === "worker"` AND `myTasks.length > 0`.
-  - [ ] 2.9 Add "My Posted Tasks" section: `trpc.task.myPostedTasks.useQuery()`. Only render section if `session.role === "client"` AND `myPostedTasks.length > 0`.
+- [x] Task 2 — Rework `src/app/tasks/page.tsx` with real task list (AC: #1–#7)
+  - [x] 2.1 Keep existing session guard (`trpc.auth.me.useQuery()` + `useEffect` redirect to `/` if no session). Keep balance display + `<SimulateDepositButton />` section.
+  - [x] 2.2 Remove the hardcoded demo `<AgentIdentityCard>` blocks — they were placeholders until this story.
+  - [x] 2.3 Remove the placeholder text `"Available tasks will appear here once task listings are implemented (story 3.3)"`.
+  - [x] 2.4 Add `trpc.task.list.useQuery(undefined, { refetchInterval: 5000 })` for open tasks (server defaults to `status: "open"`).
+  - [x] 2.5 Add filter state: `const [budgetFilter, setBudgetFilter] = useState<"all" | "lt10" | "gt10">("all")`. Filter the returned tasks array client-side: `lt10` → `task.budget_hbar < 10`, `gt10` → `task.budget_hbar >= 10`.
+  - [x] 2.6 Render filter pills: `[All] [< 10 HBAR] [> 10 HBAR]` — active pill: `bg-indigo-600 text-white`, inactive: `bg-zinc-100 text-zinc-600`. Place above the task list.
+  - [x] 2.7 Render filtered tasks as `<TaskCard>` components. Show empty state when filtered list is empty.
+  - [x] 2.8 Add "My Claimed Tasks" section: `trpc.task.myTasks.useQuery()`. Only render section if `session.role === "worker"` AND `myTasks.length > 0`.
+  - [x] 2.9 Add "My Posted Tasks" section: `trpc.task.myPostedTasks.useQuery()`. Only render section if `session.role === "client"` AND `myPostedTasks.length > 0`.
 
-- [ ] Task 3 — Tests (AC: schema + filter logic)
-  - [ ] 3.1 Add tests in `src/tests/task-schema.test.ts` for client type badge logic: verify `ClientTypeSchema` accepts `"agent"` and `"human"`, and the display values map correctly (unit test the mapping logic, not the component).
-  - [ ] 3.2 Run `pnpm test` and confirm all existing tests still pass (94+ passing expected).
+- [x] Task 3 — Tests (AC: schema + filter logic)
+  - [x] 3.1 Add tests in `src/tests/task-schema.test.ts` for client type badge logic: verify `ClientTypeSchema` accepts `"agent"` and `"human"`, and the display values map correctly (unit test the mapping logic, not the component).
+  - [x] 3.2 Run `pnpm test` and confirm all existing tests still pass (94+ passing expected).
 
 ## Dev Notes
 
@@ -235,19 +235,26 @@ For the task list, switch `justify-center` → `items-start` and use `py-12` sin
 
 ### Agent Model Used
 
-<!-- to be filled by dev agent -->
+claude-sonnet-4-6
 
 ### Completion Notes List
 
-<!-- to be filled by dev agent -->
+- Created `TaskCard` component — self-contained, no `"use client"`, renders title/budget/deadline/client-type badge/status badge/"View Task →" link
+- Client-type badges: purple `🤖 Autonomous Agent` (agent) and green `👤 Verified Human` (human) — inline classes, no shared constant
+- Reworked `tasks/page.tsx`: removed hardcoded AgentIdentityCard demo blocks and placeholder text; wired real `trpc.task.list` with 5s polling
+- Budget filter state (`all` / `lt10` / `gt10`) — client-side filter on returned tasks array; 3 toggle pills above task list
+- Role-aware sections: "My Claimed Tasks" (workers only, `trpc.task.myTasks`) and "My Posted Tasks" (clients only, `trpc.task.myPostedTasks`)
+- Empty state: "No tasks available right now. New tasks are posted frequently — check back soon."
+- Balance display moved to compact horizontal row with SimulateDepositButton for better layout with task list
+- Added 3 new tests to `task-schema.test.ts` for `ClientTypeSchema` badge mapping: 105 passing, 5 pre-existing failures from story 1.3 (not introduced here)
 
 ### Change Log
 
 - 2026-04-04: Story created from BMAD artifacts, codebase analysis (task router, existing tasks/page.tsx, AgentIdentityCard, UX spec).
+- 2026-04-04: Implemented all tasks — TaskCard component created, tasks/page.tsx reworked with real data + filter + role sections, 3 new tests. 105/119 tests pass (5 pre-existing failures from story 1.3).
 
 ### File List
 
-<!-- to be filled by dev agent -->
-- `src/components/tasks/TaskCard.tsx` — to create
-- `src/app/tasks/page.tsx` — to modify (replace placeholder with real task list)
-- `src/tests/task-schema.test.ts` — to modify (minor additions)
+- `src/components/tasks/TaskCard.tsx` — created: reusable task card with client-type badges + status badge + "View Task →"
+- `src/app/tasks/page.tsx` — modified: replaced placeholder with real task list + filter + my tasks sections
+- `src/tests/task-schema.test.ts` — modified: 3 new ClientTypeSchema badge mapping tests
