@@ -255,6 +255,32 @@ describe("task.claim input schema", () => {
   });
 });
 
+// ─── task.markComplete input schema — story 3.5 ──────────────────────────────
+describe("task.markComplete input schema", () => {
+  const markCompleteSchema = z.object({ taskId: z.string() });
+
+  it("accepts a valid task ID string", () => {
+    expect(markCompleteSchema.safeParse({ taskId: "550e8400-e29b-41d4-a716-446655440000" }).success).toBe(true);
+  });
+
+  it("rejects missing taskId", () => {
+    expect(markCompleteSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+// ─── task.validate input schema — story 3.5 ──────────────────────────────────
+describe("task.validate input schema", () => {
+  const validateSchema = z.object({ taskId: z.string() });
+
+  it("accepts a valid task ID string", () => {
+    expect(validateSchema.safeParse({ taskId: "550e8400-e29b-41d4-a716-446655440000" }).success).toBe(true);
+  });
+
+  it("rejects missing taskId", () => {
+    expect(validateSchema.safeParse({}).success).toBe(false);
+  });
+});
+
 // ─── Integration stubs (require DB) ──────────────────────────────────────────
 describe("task tRPC router — integration stubs", () => {
   it.todo("task.create — creates task with client_nullifier from session");
