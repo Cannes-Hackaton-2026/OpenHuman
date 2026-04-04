@@ -10,6 +10,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { tasks } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
@@ -57,27 +58,44 @@ export function registerTools(server: McpServer): void {
     "create_task",
     "Create a new task as an agent client",
     {
+      agent_wallet: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address"),
       title: z.string().min(5).max(100),
       description: z.string().min(10).max(1000),
       budget_hbar: z.number().int().positive(),
       deadline: z.string().datetime(),
     },
-    async (input) => {
-      // TODO (Pierre - Story 2.3): attach agent wallet from auth context
+    async ({ agent_wallet, title, description, budget_hbar, deadline }) => {
+      const { nullifier, status } = await lookupAgentBookOwner(agent_wallet);
+
+      const id = randomUUID();
+      const escrow_tx_id = `mock-escrow-${id}`;
+
       const [task] = await db
         .insert(tasks)
         .values({
-          title: input.title,
-          description: input.description,
-          budget_hbar: input.budget_hbar,
-          deadline: new Date(input.deadline),
+          id,
+          title,
+          description,
+          budget_hbar,
+          deadline: new Date(deadline),
           client_type: "agent",
+          client_agent_wallet: agent_wallet,
+          client_agent_owner_nullifier: nullifier,
+          escrow_tx_id,
           status: "open",
         })
         .returning();
 
       return {
-        content: [{ type: "text", text: JSON.stringify({ task_id: task.id, status: task.status }) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            task_id: task.id,
+            escrow_tx_id: task.escrow_tx_id,
+            status: task.status,
+            agentbook_status: status,
+          }),
+        }],
       };
     }
   );
