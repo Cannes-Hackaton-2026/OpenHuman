@@ -14,6 +14,7 @@
 import { createMcpHandler } from "mcp-handler";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyAgentRequest } from "@/lib/core/agentkit";
+import { runWithAgentRequestContext } from "@/server/mcp/context";
 import { registerTools } from "@/server/mcp/registry";
 
 const mcpHandler = createMcpHandler(
@@ -25,14 +26,16 @@ const mcpHandler = createMcpHandler(
 async function withAgentAuth(req: NextRequest): Promise<Response> {
   const agentKitHeader = req.headers.get("x-agentkit-auth") ?? "";
   try {
-    await verifyAgentRequest(agentKitHeader);
+    const identity = await verifyAgentRequest(agentKitHeader);
+    return runWithAgentRequestContext(identity.walletAddress, () =>
+      mcpHandler(req)
+    );
   } catch {
     return NextResponse.json(
       { jsonrpc: "2.0", error: { code: -32001, message: "Unauthorized" }, id: null },
       { status: 401 }
     );
   }
-  return mcpHandler(req);
 }
 
 export async function GET(req: NextRequest) {

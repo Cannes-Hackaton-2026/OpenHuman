@@ -1,6 +1,6 @@
 # Story 2.5: Agent Task Status Polling & Validation API
 
-Status: review
+Status: done
 
 ## Story
 
@@ -95,6 +95,14 @@ Claude Sonnet 4.6
 - `validate_task` : double guard (ownership + status completed), worker lookup, `releasePayment` avec fallback mock
 - Tests sans DB — logique pure testée (ownership, guards, payment branch, response shape)
 - 95 tests passent, 0 régressions
+- Code review patch: `get_task_status` / `validate_task` now enforce the authenticated AgentKit wallet from MCP request context
+- Code review patch: `validate_task` now claims validation atomically with a processing marker before payment release
+- Targeted MCP/AgentKit tests pass with `SESSION_SECRET=test-secret`
+
+### Review Findings
+
+- [x] [Review][Patch] Ownership checks trust caller-supplied `agent_wallet` instead of the authenticated `x-agentkit-auth` identity, so any authenticated agent can query or validate another agent's task [`src/server/mcp/registry.ts:110`] — Fixed: MCP task helpers now compare inputs against the authenticated request wallet before any DB access
+- [x] [Review][Patch] `validate_task` can double-release payment because it reads `completed`, calls `releasePayment()`, then updates by `task_id` only without an atomic status guard or transaction [`src/server/mcp/registry.ts:145`] — Fixed: validation now claims the task with a processing marker before payment and clears the marker on failure
 
 ### File List
 

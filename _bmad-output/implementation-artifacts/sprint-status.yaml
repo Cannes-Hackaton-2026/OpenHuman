@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-04
-last_updated: 2026-04-04T23:00:00Z
+last_updated: 2026-04-04T18:57:20Z
 
 
 project: RARH-Rent-A-Real-Human-
@@ -57,9 +57,9 @@ development_status:
   epic-2: in-progress
   2-1-agentkit-auth-middleware-and-registration: done
   2-2-agentbook-lookup-and-human-link-fail-soft: done
-  2-3-agent-task-creation-api: review
+  2-3-agent-task-creation-api: done
   2-4-visual-agent-identity-card: done
-  2-5-agent-task-status-polling-and-validation-api: review
+  2-5-agent-task-status-polling-and-validation-api: done
   epic-2-retrospective: optional
 
   # Epic 3: Task Marketplace & Lifecycle
