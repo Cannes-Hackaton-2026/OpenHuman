@@ -13,17 +13,27 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { tasks } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { lookupAgentBookOwner } from "@/lib/core/agentkit";
+import { EVM_ADDRESS_RE } from "@/lib/schemas";
 
 export function registerTools(server: McpServer): void {
   // ─── Identity Tool ──────────────────────────────────────────────────────────
   server.tool(
     "get_identity",
-    "Returns the identity info for the calling agent (wallet, human owner World ID)",
-    {},
-    async () => {
-      // TODO (Pierre - Story 2.2): resolve AgentBook identity from session
+    "Returns the AgentBook identity for a given agent wallet address",
+    { wallet_address: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address") },
+    async ({ wallet_address }) => {
+      const { nullifier, status } = await lookupAgentBookOwner(wallet_address);
       return {
-        content: [{ type: "text", text: JSON.stringify({ status: "stub — implement in Story 2.2" }) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            walletAddress: wallet_address,
+            humanOwnerNullifier: nullifier,
+            agentBookVerified: status === "verified",
+            agentBookStatus: status,
+          }),
+        }],
       };
     }
   );
