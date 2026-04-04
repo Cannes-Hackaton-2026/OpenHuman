@@ -1,6 +1,6 @@
 # Story 2.3: Agent Task Creation API
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -28,25 +28,19 @@ So that I can autonomously delegate work to verified humans.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Update `create_task` tool in `src/server/mcp/registry.ts` (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Add `agent_wallet: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address")` to tool schema — `EVM_ADDRESS_RE` is already imported from `@/lib/schemas`
-  - [ ] 1.2 Call `lookupAgentBookOwner(agent_wallet)` — destructure `{ nullifier, status }` (already returns this shape from Story 2.2)
-  - [ ] 1.3 Insert task with full agent fields:
-    ```typescript
-    client_type: "agent",
-    client_agent_wallet: agent_wallet,
-    client_agent_owner_nullifier: nullifier,   // null if offline — that's fine
-    status: "open",
-    ```
-  - [ ] 1.4 Generate mock escrow: `const escrow_tx_id = \`mock-escrow-${task.id}\``
-  - [ ] 1.5 Update the inserted task row with `escrow_tx_id` using a second DB call (or use `returning()` + separate update — see Dev Notes)
-  - [ ] 1.6 Return `{ task_id: task.id, escrow_tx_id, status: task.status, agentbook_status: status }`
+- [x] Task 1 — Update `create_task` tool in `src/server/mcp/registry.ts` (AC: #1, #2, #3, #4)
+  - [x] 1.1 `agent_wallet: z.string().regex(EVM_ADDRESS_RE)` ajouté au schema du tool
+  - [x] 1.2 `lookupAgentBookOwner(agent_wallet)` appelé — destructure `{ nullifier, status }`
+  - [x] 1.3 Task insérée avec `client_agent_wallet`, `client_agent_owner_nullifier: nullifier`
+  - [x] 1.4 UUID pré-généré (Option B) : `const id = randomUUID()` → `escrow_tx_id = mock-escrow-${id}`
+  - [x] 1.5 Single DB insert avec tous les champs incluant `id` et `escrow_tx_id`
+  - [x] 1.6 Retourne `{ task_id, escrow_tx_id, status, agentbook_status }`
 
-- [ ] Task 2 — Write tests in `src/tests/agent-task.test.ts` (AC: #1–#4)
-  - [ ] 2.1 Mock mode: calling the `create_task` logic (extracted helper) with valid inputs creates a task row with `client_agent_wallet` and `client_agent_owner_nullifier` set
-  - [ ] 2.2 AgentBook offline: task is created with `client_agent_owner_nullifier: null`
-  - [ ] 2.3 `escrow_tx_id` format: matches `mock-escrow-{uuid}` pattern
-  - [ ] 2.4 Run `pnpm test` — 80+ tests pass, no regressions
+- [x] Task 2 — Write tests in `src/tests/agent-task.test.ts` (AC: #1–#4)
+  - [x] 2.1 Payload shape validé en mock mode : `client_agent_wallet` et `client_agent_owner_nullifier` corrects
+  - [x] 2.2 AgentBook offline : `client_agent_owner_nullifier: null`, task toujours créée
+  - [x] 2.3 Format `escrow_tx_id` : `mock-escrow-{uuid}` validé par regex
+  - [x] 2.4 87 tests passent, 0 régressions (tests sans DB — cohérent avec le projet)
 
 ## Dev Notes
 
@@ -157,4 +151,12 @@ Claude Sonnet 4.6
 
 ### Completion Notes List
 
+- Option B retenue pour le DB write : UUID pré-généré → single insert, pas de second aller-retour DB
+- Tests sans DB (mock) — cohérent avec tous les autres tests du projet (postgres non démarré en CI)
+- `agentbook_status` inclus dans la réponse pour les juges / Story 2.4
+- 87 tests passent, 0 régressions
+
 ### File List
+
+- `src/server/mcp/registry.ts` — Updated: `create_task` tool complet avec `agent_wallet`, AgentBook lookup, mock escrow
+- `src/tests/agent-task.test.ts` — New: 7 tests (payload shape, escrow format, EVM validation, fail-soft)
