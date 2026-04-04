@@ -213,6 +213,13 @@ export const taskRouter = router({
         });
       }
 
+      if (task.payment_tx_id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment already released for this task",
+        });
+      }
+
       // Fetch worker to get their Hedera account (if any)
       const worker = task.worker_nullifier
         ? await db.query.users.findFirst({
@@ -251,8 +258,15 @@ export const taskRouter = router({
             payment_tx_id: paymentTxId,
             updated_at: new Date(),
           })
-          .where(eq(tasks.id, input.taskId))
+          .where(and(eq(tasks.id, input.taskId), eq(tasks.status, "completed")))
           .returning();
+
+        if (!updatedTask) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Task was already validated by a concurrent request",
+          });
+        }
 
         await tx
           .update(users)

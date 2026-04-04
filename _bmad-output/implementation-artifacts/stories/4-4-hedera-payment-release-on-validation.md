@@ -1,6 +1,6 @@
 # Story 4.4: Hedera Payment Release on Validation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -46,6 +46,13 @@ So that I can deliver the "Aha Moment" of frictionless payment.
 
 - [x] Task 3: Remove/simplify standalone `payment.releasePayment` mutation (AC: cleanup)
   - [x] 3.1 Remove the `releasePayment` mutation from `src/server/routers/payment.ts` — now integrated into `task.validate`
+
+### Review Findings
+
+- [x] [Review][Patch] TOCTOU race + double-payment on retry — added `payment_tx_id IS NULL` guard before Hedera call + optimistic lock `WHERE status = 'completed'` on DB update [src/server/routers/task.ts]
+- [x] [Review][Defer] Hedera TX succeeds but DB fails = orphaned payment with no compensation TX — deferred, needs saga/idempotency design (post-hackathon)
+- [x] [Review][Defer] No validation on budget_hbar <= 0 at validate time — deferred, CreateTaskSchema already enforces positive budget at creation
+- [x] [Review][Defer] Self-transfer Hbar(0) when worker has no hedera_account_id — deferred, conscious MVP design; real escrow is post-hackathon
 
 ## Dev Notes
 
