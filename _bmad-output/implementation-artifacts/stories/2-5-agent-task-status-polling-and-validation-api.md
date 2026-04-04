@@ -103,6 +103,8 @@ Claude Sonnet 4.6
 
 - [x] [Review][Patch] Ownership checks trust caller-supplied `agent_wallet` instead of the authenticated `x-agentkit-auth` identity, so any authenticated agent can query or validate another agent's task [`src/server/mcp/registry.ts:110`] — Fixed: MCP task helpers now compare inputs against the authenticated request wallet before any DB access
 - [x] [Review][Patch] `validate_task` can double-release payment because it reads `completed`, calls `releasePayment()`, then updates by `task_id` only without an atomic status guard or transaction [`src/server/mcp/registry.ts:145`] — Fixed: validation now claims the task with a processing marker before payment and clears the marker on failure
+- **E2E gap** : `validate_task` ne peut être exercé end-to-end qu'une fois les stories 3.4 (claim) et 3.5 (mark complete) implémentées — la tâche doit atteindre le status `completed` avant validation
+
 
 ### File List
 
