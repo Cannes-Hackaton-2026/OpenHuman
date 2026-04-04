@@ -1,6 +1,6 @@
 # Story 2.4: Visual Agent Identity Card
 
-Status: review
+Status: done
 
 ## Story
 
