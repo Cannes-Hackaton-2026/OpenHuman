@@ -1,6 +1,5 @@
 /**
  * MCP Tool Registry — entry point for agent clients (Epic 2).
- * Pierre owns the tool implementations in ./tools/
  *
  * Register all MCP tools on a McpServer instance.
  * Called by app/api/[transport]/route.ts via mcp-handler.
@@ -12,9 +11,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { tasks } from "@/server/db/schema";
+import { tasks, users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { lookupAgentBookOwner } from "@/lib/core/agentkit";
+import { releasePayment } from "@/lib/core/hedera";
 import { EVM_ADDRESS_RE } from "@/lib/schemas";
 
 export function registerTools(server: McpServer): void {
@@ -102,17 +102,34 @@ export function registerTools(server: McpServer): void {
 
   server.tool(
     "get_task_status",
-    "Poll the status of a task by ID",
-    { task_id: z.string() },
-    async ({ task_id }) => {
+    "Poll the status of a task owned by this agent",
+    {
+      task_id: z.string(),
+      agent_wallet: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address"),
+    },
+    async ({ task_id, agent_wallet }) => {
       const task = await db.query.tasks.findFirst({
         where: (t, { eq }) => eq(t.id, task_id),
       });
+
       if (!task) {
         return { content: [{ type: "text", text: JSON.stringify({ error: "Task not found" }) }] };
       }
+
+      if (task.client_agent_wallet?.toLowerCase() !== agent_wallet.toLowerCase()) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized: agent does not own this task" }) }] };
+      }
+
       return {
-        content: [{ type: "text", text: JSON.stringify({ task_id: task.id, status: task.status, escrow_tx_id: task.escrow_tx_id }) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            task_id: task.id,
+            status: task.status,
+            escrow_tx_id: task.escrow_tx_id,
+            agentbook_status: task.client_agent_owner_nullifier ? "verified" : "offline",
+          }),
+        }],
       };
     }
   );
@@ -120,17 +137,54 @@ export function registerTools(server: McpServer): void {
   server.tool(
     "validate_task",
     "Validate a completed task to trigger payment release",
-    { task_id: z.string() },
-    async ({ task_id }) => {
-      // TODO (Pierre - Story 2.5): check agent owns this task, trigger payment
+    {
+      task_id: z.string(),
+      agent_wallet: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address"),
+    },
+    async ({ task_id, agent_wallet }) => {
+      const task = await db.query.tasks.findFirst({
+        where: (t, { eq }) => eq(t.id, task_id),
+      });
+
+      if (!task) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "Task not found" }) }] };
+      }
+
+      if (task.client_agent_wallet?.toLowerCase() !== agent_wallet.toLowerCase()) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized: agent does not own this task" }) }] };
+      }
+
+      if (task.status !== "completed") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: `Cannot validate: task status is "${task.status}", expected "completed"` }) }] };
+      }
+
+      // Look up worker to get Hedera account — fail-soft if missing
+      let payment_tx_id: string;
+      const worker = task.worker_nullifier
+        ? await db.query.users.findFirst({ where: (u, { eq }) => eq(u.nullifier, task.worker_nullifier!) })
+        : null;
+
+      if (worker?.hedera_account_id) {
+        payment_tx_id = await releasePayment(worker.hedera_account_id, task.budget_hbar, task.id);
+      } else {
+        payment_tx_id = `mock-payment-${task.id}`;
+      }
+
       const [updated] = await db
         .update(tasks)
-        .set({ status: "validated", updated_at: new Date() })
+        .set({ status: "validated", payment_tx_id, updated_at: new Date() })
         .where(eq(tasks.id, task_id))
         .returning();
 
       return {
-        content: [{ type: "text", text: JSON.stringify({ task_id: updated.id, status: updated.status }) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            task_id: updated.id,
+            status: updated.status,
+            payment_tx_id: updated.payment_tx_id,
+          }),
+        }],
       };
     }
   );
