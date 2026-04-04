@@ -151,13 +151,4 @@ export async function simulateDeposit(
   return response.transactionId.toString();
 }
 
-export function hashscanUrl(txId: string): string {
-  // Hedera TX ID format: 0.0.X@seconds.nanos → Hashscan expects 0.0.X-seconds-nanos
-  // Only replace the @ and the dot between seconds.nanos (after @), not dots in account ID
-  const [accountPart, timestampPart] = txId.split("@");
-  if (!timestampPart) {
-    return `https://hashscan.io/testnet/transaction/${txId}`;
-  }
-  const formatted = `${accountPart}-${timestampPart.replace(".", "-")}`;
-  return `https://hashscan.io/testnet/transaction/${formatted}`;
-}
+export { hashscanUrl } from "./hashscan";
