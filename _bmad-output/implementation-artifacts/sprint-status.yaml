@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-04-04
-last_updated: 2026-04-04T23:00:00Z
+last_updated: 2026-04-05T00:00:00Z
 
 
 project: RARH-Rent-A-Real-Human-
@@ -68,7 +68,7 @@ development_status:
   3-2-human-client-task-creation-ui: done
   3-3-unified-task-list-view-agent-human-distinction: done
   3-4-task-claim-flow-nullifier-check: done
-  3-5-task-completion-and-validation-ui-with-delight: backlog
+  3-5-task-completion-and-validation-ui-with-delight: review
   epic-3-retrospective: optional
 
   # Epic 4: Agentic Payments & Escrow (Hedera Bounty)

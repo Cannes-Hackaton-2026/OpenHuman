@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
+import confetti from "canvas-confetti";
 import { trpc } from "@/lib/trpc/client";
 import { STATUS_COLORS } from "@/lib/constants";
 
@@ -18,14 +19,24 @@ function hashscanUrl(txId: string): string {
 }
 
 /**
- * Task detail page showing full description, escrow status, and worker actions.
+ * Task detail page showing full description, escrow status, and worker/client actions.
  */
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const utils = trpc.useUtils();
-  const { data: task, isLoading } = trpc.task.get.useQuery({ id });
+  const { data: task, isLoading } = trpc.task.get.useQuery(
+    { id },
+    {
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        return status === "claimed" ? 5000 : false;
+      },
+    }
+  );
   const { data: session } = trpc.auth.me.useQuery();
   const [claimError, setClaimError] = useState<string | null>(null);
+  const [markCompleteError, setMarkCompleteError] = useState<string | null>(null);
+  const [validateError, setValidateError] = useState<string | null>(null);
 
   const { mutate: claimTask, isPending: isClaiming } = trpc.task.claim.useMutation({
     onSuccess: () => {
@@ -33,10 +44,29 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     },
     onError: (err) => {
       // Avoid exposing raw tRPC/DB errors; map to user-friendly messages
-      const msg = err.message.includes("already claimed") 
+      const msg = err.message.includes("already claimed")
         ? "Someone else just claimed this task. Refreshing..."
         : "Failed to claim task. Please try again.";
       setClaimError(msg);
+    },
+  });
+
+  const { mutate: markComplete, isPending: isMarkingComplete } = trpc.task.markComplete.useMutation({
+    onSuccess: () => {
+      utils.task.get.invalidate({ id });
+    },
+    onError: () => {
+      setMarkCompleteError("Failed to submit completion. Please try again.");
+    },
+  });
+
+  const { mutate: validateTask, isPending: isValidating } = trpc.task.validate.useMutation({
+    onSuccess: () => {
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      utils.task.get.invalidate({ id });
+    },
+    onError: () => {
+      setValidateError("Failed to release payment. Please try again.");
     },
   });
 
@@ -105,7 +135,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{task.description}</p>
         </div>
 
-        {/* Claim action section */}
+        {/* Action section — role + status state machine */}
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-4 flex flex-col gap-3">
           {!session ? (
             <p className="text-sm text-zinc-500">
@@ -129,12 +159,24 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               {claimError && <p className="text-sm text-red-600">{claimError}</p>}
             </>
           ) : session.role === "worker" && task.status === "claimed" && task.worker_nullifier === session.nullifier ? (
+            <>
+              <p className="text-sm text-zinc-500">Complete the work, then tap below.</p>
+              <button
+                onClick={() => { setMarkCompleteError(null); markComplete({ taskId: task.id }); }}
+                disabled={isMarkingComplete}
+                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isMarkingComplete ? "Submitting…" : "Mark as Complete"}
+              </button>
+              {markCompleteError && <p className="text-sm text-red-600">{markCompleteError}</p>}
+            </>
+          ) : session.role === "worker" && task.status === "completed" && task.worker_nullifier === session.nullifier ? (
             <p className="text-sm font-medium text-emerald-600">
-              ✅ You&apos;ve claimed this task. Complete the work, then come back.
+              ✅ Completion submitted! Awaiting client validation.
             </p>
-          ) : session.role === "worker" && task.worker_nullifier === session.nullifier ? (
-            <p className="text-sm font-medium text-zinc-500">
-              You are the assigned worker for this task ({task.status}).
+          ) : session.role === "worker" && task.status === "validated" && task.worker_nullifier === session.nullifier ? (
+            <p className="text-sm font-medium text-emerald-600">
+              ✅ Task validated. Payment received.
             </p>
           ) : session.role === "worker" ? (
             <p className="text-sm text-zinc-500">
@@ -143,23 +185,68 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 Browse other available tasks →
               </Link>
             </p>
+          ) : session.role === "client" && task.client_nullifier === session.nullifier && task.status === "claimed" ? (
+            <p className="text-sm text-zinc-500">
+              ⏳ Worker is completing the task. You&apos;ll be notified when they&apos;re done.
+            </p>
+          ) : session.role === "client" && task.client_nullifier === session.nullifier && task.status === "completed" ? (
+            <>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Worker has marked this complete. Review and validate to release payment to the worker.
+              </p>
+              <button
+                onClick={() => { setValidateError(null); validateTask({ taskId: task.id }); }}
+                disabled={isValidating}
+                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isValidating ? "Releasing payment…" : "Validate & Release"}
+              </button>
+              {validateError && <p className="text-sm text-red-600">{validateError}</p>}
+            </>
+          ) : session.role === "client" && task.client_nullifier === session.nullifier && task.status === "validated" ? (
+            <p className="text-sm font-medium text-emerald-600">
+              ✅ Task complete. Payment released to worker.
+            </p>
           ) : null}
         </div>
 
-        {task.escrow_tx_id && (
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-            <p className="text-xs text-zinc-500 mb-1">Hedera Escrow</p>
-            {task.escrow_tx_id.startsWith("mock-") ? (
-              <p className="text-xs text-zinc-400 font-mono">{task.escrow_tx_id} (mock)</p>
-            ) : (
-              <a
-                href={hashscanUrl(task.escrow_tx_id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-indigo-600 hover:underline font-mono"
-              >
-                {task.escrow_tx_id.slice(0, 20)}… ↗
-              </a>
+        {/* Hedera TX section — escrow + payment */}
+        {(task.escrow_tx_id || task.payment_tx_id) && (
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 flex flex-col gap-2">
+            <p className="text-xs text-zinc-500">Hedera</p>
+            {task.escrow_tx_id && (
+              <div>
+                <p className="text-xs text-zinc-400 mb-0.5">Escrow TX</p>
+                {task.escrow_tx_id.startsWith("mock-") ? (
+                  <p className="text-xs text-zinc-400 font-mono">{task.escrow_tx_id} (mock)</p>
+                ) : (
+                  <a
+                    href={hashscanUrl(task.escrow_tx_id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-600 hover:underline font-mono"
+                  >
+                    {task.escrow_tx_id.slice(0, 20)}… ↗
+                  </a>
+                )}
+              </div>
+            )}
+            {task.payment_tx_id && (
+              <div>
+                <p className="text-xs text-zinc-400 mb-0.5">Payment TX</p>
+                {task.payment_tx_id.startsWith("mock-") ? (
+                  <p className="text-xs text-zinc-400 font-mono">{task.payment_tx_id} (mock)</p>
+                ) : (
+                  <a
+                    href={hashscanUrl(task.payment_tx_id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-600 hover:underline font-mono"
+                  >
+                    {task.payment_tx_id.slice(0, 20)}… ↗
+                  </a>
+                )}
+              </div>
             )}
           </div>
         )}
