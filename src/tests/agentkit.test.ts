@@ -64,8 +64,20 @@ describe("verifyAgentRequest — mock mode", () => {
 
     expect(identity.walletAddress).toBe(VALID_WALLET);
     // Story 2.2: mock mode now returns a deterministic AgentBook nullifier
-    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-AbCd1234");
+    // and correctly handles casing (normalized to lowercase)
+    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-abcd1234");
     expect(identity.agentBookVerified).toBe(true);
+  });
+
+  it("accepts case-insensitive header and wallet", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
+    const { verifyAgentRequest } = await import("@/lib/core/agentkit");
+
+    const lowerHeader = VALID_HEADER.toLowerCase();
+    const identity = await verifyAgentRequest(lowerHeader);
+
+    expect(identity.walletAddress.toLowerCase()).toBe(VALID_WALLET.toLowerCase());
+    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-abcd1234");
   });
 
   it("still throws AgentAuthError on malformed header in mock mode", async () => {
@@ -79,22 +91,27 @@ describe("verifyAgentRequest — mock mode", () => {
 });
 
 describe("lookupAgentBookOwner — mock mode", () => {
-  it("returns a deterministic nullifier based on wallet address", async () => {
+  it("returns a deterministic nullifier and verified status", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
     const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
 
     const result = await lookupAgentBookOwner(VALID_WALLET);
-    // slice(2, 10) skips "0x", takes 8 chars: "AbCd1234"
-    expect(result).toBe("mock-owner-nullifier-AbCd1234");
+    expect(result.nullifier).toBe("mock-owner-nullifier-abcd1234");
+    expect(result.status).toBe("verified");
   });
 
-  it("returns same nullifier for same wallet (deterministic)", async () => {
+  it("normalizes wallet address casing for determinism", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "true");
     const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
 
-    const a = await lookupAgentBookOwner(VALID_WALLET);
-    const b = await lookupAgentBookOwner(VALID_WALLET);
-    expect(a).toBe(b);
+    const upper = VALID_WALLET.toUpperCase();
+    const lower = VALID_WALLET.toLowerCase();
+    
+    const resUpper = await lookupAgentBookOwner(upper);
+    const resLower = await lookupAgentBookOwner(lower);
+    
+    expect(resUpper.nullifier).toBe(resLower.nullifier);
+    expect(resUpper.nullifier).toBe("mock-owner-nullifier-abcd1234");
   });
 
   it("returns different nullifiers for different wallets", async () => {
@@ -104,17 +121,19 @@ describe("lookupAgentBookOwner — mock mode", () => {
     const other = "0x1111111111111111111111111111111111111111";
     const a = await lookupAgentBookOwner(VALID_WALLET);
     const b = await lookupAgentBookOwner(other);
-    expect(a).not.toBe(b);
+    expect(a.nullifier).not.toBe(b.nullifier);
   });
 });
 
 describe("lookupAgentBookOwner — production mode (SDK unavailable)", () => {
-  it("returns null without throwing when SDK is not installed", async () => {
+  it("returns offline status without throwing when SDK is not installed", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_WORLDID", "false");
     const { lookupAgentBookOwner } = await import("@/lib/core/agentkit");
 
-    // SDK not installed → dynamic import throws → fail-soft returns null
-    await expect(lookupAgentBookOwner(VALID_WALLET)).resolves.toBeNull();
+    // SDK not installed → dynamic import throws → fail-soft returns status: offline
+    const result = await lookupAgentBookOwner(VALID_WALLET);
+    expect(result.nullifier).toBeNull();
+    expect(result.status).toBe("offline");
   });
 });
 
@@ -126,14 +145,15 @@ describe("verifyAgentRequest — mock mode with AgentBook", () => {
     const identity = await verifyAgentRequest(VALID_HEADER);
 
     expect(identity.agentBookVerified).toBe(true);
-    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-AbCd1234");
+    expect(identity.humanOwnerNullifier).toBe("mock-owner-nullifier-abcd1234");
   });
 });
 
 describe("agentKitHeaderSchema", () => {
-  it("validates correct header format", async () => {
+  it("validates correct header format (case-insensitive)", async () => {
     const { agentKitHeaderSchema } = await import("@/lib/schemas");
     expect(agentKitHeaderSchema.safeParse(VALID_HEADER).success).toBe(true);
+    expect(agentKitHeaderSchema.safeParse(VALID_HEADER.toLowerCase()).success).toBe(true);
   });
 
   it("rejects header without AgentKit prefix", async () => {

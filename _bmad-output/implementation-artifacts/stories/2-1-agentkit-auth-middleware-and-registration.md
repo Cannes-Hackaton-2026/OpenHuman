@@ -149,7 +149,13 @@ Claude Sonnet 4.6
 ### Review Findings
 
 - [x] [Review][Patch] Regex dupliquée — `WALLET_CAPTURE_RE` vs `agentKitHeaderSchema` [`src/lib/core/agentkit.ts`, `src/lib/schemas/index.ts`] — Fixed: `AGENTKIT_HEADER_RE` exporté depuis schemas, importé dans agentkit.ts
+- [x] [Review][Patch] État "not-registered" manquant dans l'outil `get_identity` [`src/server/mcp/registry.ts`] — Fixed: `lookupAgentBookOwner` retourne désormais un statut granulaire
+- [x] [Review][Patch] Sensibilité à la casse (Regex) [`src/lib/schemas/index.ts`] — Fixed: Regex passée en `/i` (case-insensitive)
+- [x] [Review][Patch] Messages d'erreur incohérents [`src/lib/core/agentkit.ts`] — Fixed: Standardisation des messages d'erreur `AgentAuthError`
+- [x] [Review][Patch] Casing incohérent dans `get_identity` [`src/server/mcp/registry.ts`] — Fixed: `agentbook_status` renommé en `agentBookStatus` (camelCase)
+- [x] [Review][Decision] Absence de vérification cryptographique — Decision: Gardé en "header-only" pour l'instant (hackathon fallback)
 - [x] [Review][Defer] Pas de test direct pour `lookupAgentBookOwner()` [`src/lib/core/agentkit.ts:70`] — deferred, pre-existing (Story 2.2 couvre ce cas)
+- [x] [Review][Defer] Absence de tests pour l'outil MCP `get_identity` [`src/server/mcp/registry.ts`] — deferred, story 2.2 scope finalization
 
 ### File List
 

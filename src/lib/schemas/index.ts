@@ -62,8 +62,8 @@ export type ClientType = z.infer<typeof ClientTypeSchema>;
 
 // ─── AgentKit ─────────────────────────────────────────────────────────────────
 // Single source of truth for all EVM address and AgentKit header patterns
-export const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-export const AGENTKIT_HEADER_RE = /^AgentKit (0x[0-9a-fA-F]{40})$/;
+export const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/i;
+export const AGENTKIT_HEADER_RE = /^AgentKit (0x[0-9a-fA-F]{40})$/i;
 export const agentKitHeaderSchema = z
   .string()
   .regex(AGENTKIT_HEADER_RE, "Invalid AgentKit header format — expected: AgentKit 0x<40 hex chars>");

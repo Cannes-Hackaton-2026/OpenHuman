@@ -23,16 +23,15 @@ export function registerTools(server: McpServer): void {
     "Returns the AgentBook identity for a given agent wallet address",
     { wallet_address: z.string().regex(EVM_ADDRESS_RE, "Invalid EVM address") },
     async ({ wallet_address }) => {
-      const humanOwnerNullifier = await lookupAgentBookOwner(wallet_address);
-      const agentbook_status = humanOwnerNullifier ? "verified" : "offline";
+      const { nullifier, status } = await lookupAgentBookOwner(wallet_address);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
             walletAddress: wallet_address,
-            humanOwnerNullifier,
-            agentBookVerified: humanOwnerNullifier !== null,
-            agentbook_status,
+            humanOwnerNullifier: nullifier,
+            agentBookVerified: status === "verified",
+            agentBookStatus: status,
           }),
         }],
       };

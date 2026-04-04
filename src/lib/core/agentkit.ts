@@ -28,23 +28,6 @@ export class AgentAuthError extends Error {
 export async function verifyAgentRequest(
   agentKitHeader: string
 ): Promise<AgentIdentity> {
-  // Mock mode: accept any well-formed header, return mock AgentBook identity
-  if (process.env.NEXT_PUBLIC_MOCK_WORLDID === "true") {
-    const parsed = agentKitHeaderSchema.safeParse(agentKitHeader);
-    if (!parsed.success) {
-      throw new AgentAuthError("Invalid AgentKit header format (mock mode)");
-    }
-    const match = AGENTKIT_HEADER_RE.exec(agentKitHeader)!;
-    const walletAddress = match[1];
-    const humanOwnerNullifier = await lookupAgentBookOwner(walletAddress);
-    return {
-      walletAddress,
-      humanOwnerNullifier,
-      agentBookVerified: humanOwnerNullifier !== null,
-    };
-  }
-
-  // Production: validate header with Zod schema
   const parsed = agentKitHeaderSchema.safeParse(agentKitHeader);
   if (!parsed.success) {
     throw new AgentAuthError(
@@ -57,36 +40,49 @@ export async function verifyAgentRequest(
   const match = AGENTKIT_HEADER_RE.exec(agentKitHeader)!;
   const walletAddress = match[1];
 
-  const humanOwnerNullifier = await lookupAgentBookOwner(walletAddress);
+  const { nullifier, status } = await lookupAgentBookOwner(walletAddress);
 
   return {
     walletAddress,
-    humanOwnerNullifier,
-    agentBookVerified: humanOwnerNullifier !== null,
+    humanOwnerNullifier: nullifier,
+    agentBookVerified: status === "verified",
   };
 }
 
 /**
  * Look up the human owner of an agent wallet in AgentBook.
- * Fail-soft: returns null if the SDK is unavailable or the agent is not registered.
+ * Fail-soft: returns status "offline" if the SDK is unavailable or network fails.
  *
  * Mock mode returns a deterministic nullifier for demo purposes.
  */
 export async function lookupAgentBookOwner(
   walletAddress: string
-): Promise<string | null> {
+): Promise<{ nullifier: string | null; status: "verified" | "not-registered" | "offline" }> {
+  const normalizedWallet = walletAddress.toLowerCase();
+
   if (process.env.NEXT_PUBLIC_MOCK_WORLDID === "true") {
     // Deterministic mock: skip "0x" prefix, take 8 chars
-    return `mock-owner-nullifier-${walletAddress.slice(2, 10)}`;
+    return {
+      nullifier: `mock-owner-nullifier-${normalizedWallet.slice(2, 10)}`,
+      status: "verified",
+    };
   }
 
   try {
     // Dynamic import — avoids build-time crash if SDK is incompatible with Next.js
     const { AgentBook } = await import("@worldcoin/agentkit");
     const agentBook = new AgentBook();
-    return await agentBook.getHumanOwner(walletAddress);
-  } catch {
-    console.warn("[AgentKit] AgentBook lookup failed — proceeding with caution");
-    return null;
+    const res = await agentBook.getHumanOwner(normalizedWallet);
+    
+    return {
+      nullifier: res || null,
+      status: res ? "verified" : "not-registered",
+    };
+  } catch (error) {
+    console.warn("[AgentKit] AgentBook lookup failed — proceeding with caution:", error);
+    return {
+      nullifier: null,
+      status: "offline",
+    };
   }
 }
