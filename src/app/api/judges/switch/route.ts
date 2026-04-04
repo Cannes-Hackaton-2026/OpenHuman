@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { users, nullifiers } from "@/server/db/schema";
 import { createSession, SESSION_COOKIE_OPTIONS } from "@/lib/core/session";
+
+const DEMO_AGENT_WALLET = "0x000000000000000000000000000000000a21a001";
 
 const PERSONAS = {
   "kenji-worker": {
@@ -18,7 +19,7 @@ const PERSONAS = {
     hbar_balance: 500,
   },
   "aria-agent": {
-    wallet: "0x-demo-agent-aria",
+    wallet: DEMO_AGENT_WALLET,
   },
 } as const;
 
@@ -36,23 +37,27 @@ function isHumanPersona(key: PersonaKey): key is HumanPersona {
 async function switchToHuman(personaKey: HumanPersona) {
   const persona = PERSONAS[personaKey];
 
-  const [user] = await db
-    .insert(users)
-    .values({
-      nullifier: persona.nullifier,
-      role: persona.role,
-      hbar_balance: persona.hbar_balance,
-    })
-    .onConflictDoUpdate({
-      target: users.nullifier,
-      set: { role: persona.role },
-    })
-    .returning();
+  const [user] = await db.transaction(async (tx) => {
+    const [u] = await tx
+      .insert(users)
+      .values({
+        nullifier: persona.nullifier,
+        role: persona.role,
+        hbar_balance: persona.hbar_balance,
+      })
+      .onConflictDoUpdate({
+        target: users.nullifier,
+        set: { role: persona.role, hbar_balance: persona.hbar_balance },
+      })
+      .returning();
 
-  await db
-    .insert(nullifiers)
-    .values({ nullifier: persona.nullifier, action: "register" })
-    .onConflictDoNothing();
+    await tx
+      .insert(nullifiers)
+      .values({ nullifier: persona.nullifier, action: "register" })
+      .onConflictDoNothing();
+
+    return [u];
+  });
 
   const token = await createSession({
     nullifier: user.nullifier,
@@ -90,13 +95,27 @@ async function triggerAgent(req: NextRequest) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-agentkit-auth": agentWallet,
+      "x-agentkit-auth": `AgentKit ${agentWallet}`,
     },
     body: JSON.stringify(mcpBody),
   });
 
   const result = await mcpResponse.json();
-  return { mcpResponse: result, agentWallet };
+
+  let taskId: string | null = null;
+  let escrowTxId: string | null = null;
+  try {
+    const content = result?.result?.content?.[0]?.text;
+    if (content) {
+      const parsed = JSON.parse(content);
+      taskId = parsed?.taskId ?? null;
+      escrowTxId = parsed?.escrowTxId ?? null;
+    }
+  } catch {
+    // MCP response not parseable, leave taskId/escrowTxId null
+  }
+
+  return { taskId, escrowTxId, agentWallet };
 }
 
 export async function POST(req: NextRequest) {
@@ -105,7 +124,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const persona = body.persona as PersonaKey | undefined;
 
   if (!persona || !(persona in PERSONAS)) {
@@ -118,24 +142,25 @@ export async function POST(req: NextRequest) {
   if (isHumanPersona(persona)) {
     const { token, redirect, user } = await switchToHuman(persona);
 
-    const cookieStore = await cookies();
-    cookieStore.set("session", token, SESSION_COOKIE_OPTIONS);
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       persona,
       redirect,
       user: { id: user.id, nullifier: user.nullifier, role: user.role },
     });
+    response.cookies.set("session", token, SESSION_COOKIE_OPTIONS);
+
+    return response;
   }
 
   // aria-agent
-  const { mcpResponse, agentWallet } = await triggerAgent(req);
+  const { taskId, escrowTxId, agentWallet } = await triggerAgent(req);
 
   return NextResponse.json({
     success: true,
     persona: "aria-agent",
     agentWallet,
-    mcpResult: mcpResponse,
+    taskId,
+    escrowTxId,
   });
 }

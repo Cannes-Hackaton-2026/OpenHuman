@@ -71,8 +71,10 @@ export default function JudgesDashboard() {
       const result = await callSwitch(personaKey);
 
       if (personaKey === "aria-agent") {
+        const taskInfo = result.taskId ? `Task ID: ${result.taskId}` : "Task created";
+        const escrowInfo = result.escrowTxId ? ` | Escrow: ${result.escrowTxId}` : "";
         toast.success("Agent Aria triggered a task", {
-          description: `MCP response received`,
+          description: `${taskInfo}${escrowInfo}`,
         });
       } else if (result.redirect) {
         toast.success(`Switched to ${result.user?.role ?? personaKey}`);

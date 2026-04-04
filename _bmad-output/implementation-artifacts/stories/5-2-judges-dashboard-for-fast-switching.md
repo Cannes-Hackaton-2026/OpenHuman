@@ -1,6 +1,6 @@
 # Story 5.2: Judges Dashboard for Fast Switching
 
-Status: review
+Status: done
 
 ## Story
 
@@ -125,9 +125,24 @@ Claude Opus 4.6
 - 5 new tests covering session creation, persona validation, and schema compliance
 - All 137 tests pass (0 regressions)
 
+### Review Findings
+
+- [x] [Review][Decision] NEXT_PUBLIC_ exposes admin key to all browsers — accepted for hackathon, page is hidden
+- [x] [Review][Decision] Button labels missing role suffix (AC#1) — kept current design, role visible on card
+- [x] [Review][Patch] CRITICAL: x-agentkit-auth header invalid — FIXED: valid 40-hex wallet + "AgentKit " prefix
+- [x] [Review][Patch] Agent toast doesn't display task ID (AC#4) — FIXED: parse taskId/escrowTxId from MCP response
+- [x] [Review][Patch] req.json() without try/catch — FIXED: returns 400 on malformed body
+- [x] [Review][Patch] onConflictDoUpdate missing hbar_balance — FIXED: upsert now includes hbar_balance
+- [x] [Review][Patch] cookies().set() may not propagate — FIXED: use response.cookies.set() pattern
+- [x] [Review][Patch] Non-atomic user + nullifier insert — FIXED: wrapped in db.transaction
+- [x] [Review][Defer] Self-fetch /api/mcp may deadlock in serverless [route.ts:89] — deferred, architectural pattern
+- [x] [Review][Defer] Tests don't cover API route or DB logic [judges-switch.test.ts] — deferred, large scope for hackathon
+- [x] [Review][Defer] Error details leaked to client in MCP/agent responses [route.ts:135-140] — deferred, acceptable for hackathon demo
+
 ### Change Log
 
 - 2026-04-04: Initial implementation of story 5.2 - all tasks complete
+- 2026-04-04: Code review completed — 2 decisions needed, 6 patches, 3 deferred, 5 dismissed
 
 ### File List
 
