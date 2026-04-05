@@ -1,0 +1,3 @@
+{
+  "buildCommand": "pnpm db:push --force && next build"
+}
