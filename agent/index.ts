@@ -1,26 +1,36 @@
 /**
- * OpenHuman Demo Agent
+ * OpenHuman Agent
  *
- * An autonomous AI agent that uses the OpenHuman MCP API to:
- *   1. Post tasks that require verified humans
- *   2. Monitor task status in real time
- *   3. Automatically validate + release payment when work is done
+ * An autonomous AI agent powered by Claude that:
+ *   1. Posts tasks that require verified humans
+ *   2. Monitors task status in real time
+ *   3. Uses Claude to review completed work before releasing payment
  *
  * Usage:
- *   pnpm agent:demo              — post tasks + watch loop
- *   pnpm agent:demo --watch-only — only watch + validate (no new tasks)
- *   pnpm agent:demo --list       — list current tasks and exit
+ *   pnpm agent:run              — post tasks + watch loop
+ *   pnpm agent:run --watch-only — only watch + review (no new tasks)
+ *   pnpm agent:run --list       — list current tasks and exit
+ *
+ * Required env:
+ *   ANTHROPIC_API_KEY  — Claude API key for quality review
+ *   AGENT_SERVER_URL   — OpenHuman server (default: http://localhost:3000)
+ *   AGENT_WALLET       — Agent wallet address (default: 0x000...CAFE)
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config({ path: ".env" });
+
 import { createTask, listTasks, validateTask, WALLET, BASE_URL } from "./mcp.ts";
+import { reviewTask } from "./review.ts";
 import { TASK_CATALOG } from "./tasks.ts";
 import type { Task } from "./mcp.ts";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const POLL_INTERVAL_MS = 15_000; // how often to check for completed tasks
-const MAX_TASKS_TO_POST = 2;     // how many tasks to post on startup
+const POLL_INTERVAL_MS = 15_000;
+const MAX_TASKS_TO_POST = 2;
 
-// ── Terminal colours (no deps) ────────────────────────────────────────────────
+// ── Terminal colours ──────────────────────────────────────────────────────────
 const c = {
   reset:  "\x1b[0m",
   dim:    "\x1b[2m",
@@ -31,6 +41,7 @@ const c = {
   yellow: "\x1b[33m",
   red:    "\x1b[31m",
   grey:   "\x1b[90m",
+  magenta:"\x1b[35m",
 };
 
 function ts() {
@@ -44,14 +55,20 @@ function log(emoji: string, msg: string) {
 // ── Banner ────────────────────────────────────────────────────────────────────
 function banner() {
   console.log();
-  console.log(c.bold + c.blue + "  ╔═══════════════════════════════════════╗" + c.reset);
-  console.log(c.bold + c.blue + "  ║   OpenHuman  —  Demo Agent  v0.1      ║" + c.reset);
-  console.log(c.bold + c.blue + "  ╚═══════════════════════════════════════╝" + c.reset);
+  console.log(c.bold + c.blue + "  ╔═══════════════════════════════════════════╗" + c.reset);
+  console.log(c.bold + c.blue + "  ║   OpenHuman Agent  ·  powered by Claude   ║" + c.reset);
+  console.log(c.bold + c.blue + "  ╚═══════════════════════════════════════════╝" + c.reset);
   console.log();
   console.log(`  ${c.dim}Server ${c.reset}  ${BASE_URL}`);
   console.log(`  ${c.dim}Wallet ${c.reset}  ${c.cyan}${WALLET}${c.reset}`);
+  console.log(`  ${c.dim}Model  ${c.reset}  ${c.magenta}claude-opus-4-6${c.reset}`);
   console.log(`  ${c.dim}Poll   ${c.reset}  every ${POLL_INTERVAL_MS / 1000}s`);
   console.log();
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log(c.red + c.bold + "  ⚠  ANTHROPIC_API_KEY not set — quality review will fail" + c.reset);
+    console.log();
+  }
 }
 
 // ── Post tasks ────────────────────────────────────────────────────────────────
@@ -67,8 +84,7 @@ async function postInitialTasks(): Promise<void> {
       log(
         "✅",
         `${c.green}Posted${c.reset} ${c.bold}${def.title}${c.reset}\n` +
-        `        ${c.dim}id: ${result.task_id.slice(0, 8)}…  escrow: ${result.escrow_tx_id.slice(0, 20)}…  ` +
-        `agentbook: ${result.agentbook_status}${c.reset}`
+        `        ${c.dim}id: ${result.task_id.slice(0, 8)}…  escrow: ${result.escrow_tx_id.slice(0, 20)}…${c.reset}`
       );
     } catch (err) {
       log("❌", `${c.red}Failed to post "${def.title}": ${(err as Error).message}${c.reset}`);
@@ -78,19 +94,32 @@ async function postInitialTasks(): Promise<void> {
   console.log();
 }
 
-// ── Watch loop ────────────────────────────────────────────────────────────────
-const validated = new Set<string>(); // avoid double-validating
+// ── Watch + review loop ───────────────────────────────────────────────────────
+const reviewed = new Set<string>(); // avoid reviewing the same task twice
 
-async function watchAndValidate(): Promise<void> {
+/** Snapshot all already-completed tasks on startup so we don't re-review them. */
+async function snapshotExisting(): Promise<void> {
+  try {
+    const existing = await listTasks("completed");
+    for (const t of existing) reviewed.add(t.id);
+    if (existing.length > 0) {
+      log("📸", `${c.dim}Skipping ${existing.length} already-completed task(s) from previous runs.${c.reset}`);
+    }
+  } catch {
+    // Non-fatal — worst case we review old tasks once
+  }
+}
+
+async function watchAndReview(): Promise<void> {
   let tasks: Task[];
   try {
     tasks = await listTasks("completed");
   } catch (err) {
-    log("⚠️ ", `${c.yellow}MCP unreachable: ${(err as Error).message}${c.reset}`);
+    log("⚠️ ", `${c.yellow}Server unreachable: ${(err as Error).message}${c.reset}`);
     return;
   }
 
-  // Only care about tasks this agent posted
+  // Only handle tasks this agent posted
   const mine = tasks.filter(
     (t) => t.client_agent_wallet?.toLowerCase() === WALLET.toLowerCase()
   );
@@ -103,24 +132,46 @@ async function watchAndValidate(): Promise<void> {
   process.stdout.write("\n");
 
   for (const task of mine) {
-    if (validated.has(task.id)) continue;
+    if (reviewed.has(task.id)) continue;
+    reviewed.add(task.id); // mark early to prevent concurrent re-entry
 
-    log("🔔", `${c.yellow}Human completed:${c.reset} ${c.bold}${task.title}${c.reset}`);
+    log("🔔", `${c.yellow}Work submitted:${c.reset} ${c.bold}${task.title}${c.reset}`);
     log("   ", `${c.dim}Worker: ${task.worker_nullifier?.slice(0, 14) ?? "unknown"}…${c.reset}`);
+    log("🧠", `${c.magenta}Asking Claude to review…${c.reset}`);
 
     try {
-      const result = await validateTask(task.id);
-      validated.add(task.id);
+      const review = await reviewTask(task);
+
+      const confidenceLabel =
+        review.confidence === "high"   ? c.green + "high" :
+        review.confidence === "medium" ? c.yellow + "medium" :
+                                         c.red + "low";
+
       log(
-        "💸",
-        `${c.green}${c.bold}Payment released!${c.reset}  ${c.cyan}${result.payment_tx_id?.slice(0, 24) ?? "mock"}…${c.reset}`
+        review.approved ? "✅" : "🚫",
+        `${review.approved ? c.green + c.bold + "APPROVED" : c.red + c.bold + "REJECTED"}${c.reset}  ` +
+        `${c.dim}confidence: ${confidenceLabel + c.reset + c.dim}${c.reset}`
       );
-      if (result.hashscan_url) {
-        log("🔗", `${c.dim}Hashscan: ${result.hashscan_url}${c.reset}`);
+      log("💬", `${c.dim}${review.reasoning}${c.reset}`);
+
+      if (review.approved) {
+        const result = await validateTask(task.id);
+        log(
+          "💸",
+          `${c.green}${c.bold}Payment released!${c.reset}  ` +
+          `${c.cyan}${result.payment_tx_id?.slice(0, 24) ?? "tx-pending"}…${c.reset}`
+        );
+        if (result.hashscan_url) {
+          log("🔗", `${c.dim}Hashscan: ${result.hashscan_url}${c.reset}`);
+        }
+      } else {
+        log("⏸ ", `${c.yellow}Payment withheld. Manual review required.${c.reset}`);
       }
+
       console.log();
     } catch (err) {
-      log("❌", `${c.red}Validation failed: ${(err as Error).message}${c.reset}`);
+      reviewed.delete(task.id); // allow retry on error
+      log("❌", `${c.red}Review failed: ${(err as Error).message}${c.reset}`);
     }
   }
 }
@@ -128,6 +179,10 @@ async function watchAndValidate(): Promise<void> {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+function statusIcon(s: Task["status"]): string {
+  return { open: "🟢", claimed: "🟡", completed: "🔵", validated: "✅", expired: "⛔", refunded: "↩️" }[s] ?? "⬜";
 }
 
 async function listAndExit() {
@@ -149,10 +204,6 @@ async function listAndExit() {
   process.exit(0);
 }
 
-function statusIcon(s: Task["status"]): string {
-  return { open: "🟢", claimed: "🟡", completed: "🔵", validated: "✅", expired: "⛔", refunded: "↩️" }[s] ?? "⬜";
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const args = process.argv.slice(2);
@@ -164,17 +215,18 @@ async function main() {
 
   banner();
 
+  // Snapshot already-completed tasks before posting new ones
+  await snapshotExisting();
+
   if (!args.includes("--watch-only")) {
     await postInitialTasks();
   }
 
   log("👀", `Watching for completed tasks… ${c.dim}(Ctrl+C to stop)${c.reset}\n`);
 
-  // Run once immediately, then on interval
-  await watchAndValidate();
-  const interval = setInterval(watchAndValidate, POLL_INTERVAL_MS);
+  await watchAndReview();
+  const interval = setInterval(watchAndReview, POLL_INTERVAL_MS);
 
-  // Graceful shutdown
   process.on("SIGINT", () => {
     clearInterval(interval);
     console.log("\n\n" + ts() + "  👋  Agent stopped.\n");
@@ -183,6 +235,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(c.red + "\nFatal error: " + err.message + c.reset);
+  console.error(c.red + "\nFatal: " + err.message + c.reset);
   process.exit(1);
 });

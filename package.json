@@ -17,12 +17,13 @@
     "db:reset": "docker compose down -v && docker compose up -d postgres && sleep 2 && drizzle-kit push && tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "dev:full": "pnpm db:up && pnpm db:push && next dev --turbopack",
-    "agent:demo": "tsx agent/index.ts",
-    "agent:watch": "tsx agent/index.ts --watch-only",
-    "agent:list": "tsx agent/index.ts --list"
+    "agent:run": "tsx --env-file=.env.local agent/index.ts",
+    "agent:watch": "tsx --env-file=.env.local agent/index.ts --watch-only",
+    "agent:list": "tsx --env-file=.env.local agent/index.ts --list"
   },
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
     "@base-ui/react": "^1.3.0",
     "@hashgraph/sdk": "^2.81.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
