@@ -154,17 +154,3 @@ export default function AdminPage() {
     </div>
   );
 }
-          Judges Dashboard
-          </Link>
-          <Link
-            href="/tasks"
-            className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline underline-offset-4"
-          >
-            Task List
-          </Link>
-        </div>
-
-      </div>
-    </div>
-  );
-}

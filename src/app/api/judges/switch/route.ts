@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { users, nullifiers } from "@/server/db/schema";
 import { createSession, SESSION_COOKIE_OPTIONS } from "@/lib/core/session";
+import { runWithAgentRequestContext } from "@/server/mcp/context";
+import { createAgentTask } from "@/server/mcp/task-tools";
 
 const DEMO_AGENT_WALLET = "0x000000000000000000000000000000000a21a001";
 
@@ -130,38 +132,6 @@ export async function POST(req: NextRequest) {
 
   // aria-agent
   const { taskId, escrowTxId, agentWallet } = await triggerAgent();
-
-  return NextResponse.json({
-    success: true,
-    persona: "aria-agent",
-    agentWallet,
-    taskId,
-    escrowTxId,
-  });
-}
-S)) {
-    return NextResponse.json(
-      { error: "Invalid persona. Use: kenji-worker, sophie-client, or aria-agent" },
-      { status: 400 }
-    );
-  }
-
-  if (isHumanPersona(persona)) {
-    const { token, redirect, user } = await switchToHuman(persona);
-
-    const response = NextResponse.json({
-      success: true,
-      persona,
-      redirect,
-      user: { id: user.id, nullifier: user.nullifier, role: user.role },
-    });
-    response.cookies.set("session", token, SESSION_COOKIE_OPTIONS);
-
-    return response;
-  }
-
-  // aria-agent
-  const { taskId, escrowTxId, agentWallet } = await triggerAgent(req);
 
   return NextResponse.json({
     success: true,
