@@ -63,6 +63,7 @@ async function callReset() {
 export default function JudgesDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [adminKey, setAdminKey] = useState("");
   const me = trpc.auth.me.useQuery();
 
   async function handlePersonaClick(personaKey: string) {

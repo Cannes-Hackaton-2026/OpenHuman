@@ -6,11 +6,12 @@
 
 import { taskRouter } from "@/server/routers/task";
 import type { SessionPayload } from "@/lib/schemas";
+import type { Context } from "@/server/context";
 
 export function makeTaskCaller(session: SessionPayload | null = null) {
   return taskRouter.createCaller({
     session,
-    req: {} as Parameters<ReturnType<typeof taskRouter.createCaller>>[0]["req"],
+    req: {} as Context["req"],
   });
 }
 

@@ -17,7 +17,7 @@ describe("mock escrow_tx_id format", () => {
   });
 
   it("is unique per task (different UUIDs → different escrow IDs)", () => {
-    const { randomUUID } = require("crypto");
+    const { randomUUID } = await import("crypto");
     const id1 = randomUUID();
     const id2 = randomUUID();
     expect(`mock-escrow-${id1}`).not.toBe(`mock-escrow-${id2}`);

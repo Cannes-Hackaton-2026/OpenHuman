@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { users, tasks, nullifiers } from "@/server/db/schema";
 import { runSeed } from "@/server/db/seed";

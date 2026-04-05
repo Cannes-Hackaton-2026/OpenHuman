@@ -12,9 +12,9 @@
  *   pnpm agent:demo --list       — list current tasks and exit
  */
 
-import { createTask, listTasks, validateTask, WALLET, BASE_URL } from "./mcp.ts";
-import { TASK_CATALOG } from "./tasks.ts";
-import type { Task } from "./mcp.ts";
+import { createTask, listTasks, validateTask, WALLET, BASE_URL } from "./mcp";
+import { TASK_CATALOG } from "./tasks";
+import type { Task } from "./mcp";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const POLL_INTERVAL_MS = 15_000; // how often to check for completed tasks

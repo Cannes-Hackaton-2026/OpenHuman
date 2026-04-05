@@ -104,7 +104,7 @@ export default function AgentDemoPage() {
       {done && task && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4">
           <p className="font-bold text-green-800 mb-1">✅ Task posted by AI agent!</p>
-          <p className="text-xs text-green-700 mb-3">"{task.title}"</p>
+          <p className="text-xs text-green-700 mb-3">&quot;{task.title}&quot;</p>
           <Link
             href={`/tasks/${task.id}`}
             className="inline-block bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-xl"
