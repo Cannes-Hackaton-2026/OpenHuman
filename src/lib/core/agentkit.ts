@@ -70,7 +70,8 @@ export async function lookupAgentBookOwner(
 
   try {
     // Dynamic import — avoids build-time crash if SDK is incompatible with Next.js
-    const { AgentBook } = await import("@worldcoin/agentkit");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { AgentBook } = await import("@worldcoin/agentkit") as any;
     const agentBook = new AgentBook();
     const res = await agentBook.getHumanOwner(normalizedWallet);
     

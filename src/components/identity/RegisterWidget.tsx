@@ -12,10 +12,8 @@ import { AlreadyRegisteredPanel } from "@/components/identity/AlreadyRegisteredP
 const isMock = process.env.NEXT_PUBLIC_MOCK_WORLDID === "true";
 
 export function RegisterWidget({
-  role = "worker",
-  redirectTo = "/tasks",
+  redirectTo = "/dashboard",
 }: {
-  role?: "worker" | "client";
   redirectTo?: string;
 }) {
   const router = useRouter();
@@ -77,9 +75,8 @@ export function RegisterWidget({
     try {
       await registerMutation.mutateAsync({
         rp_id: "mock-rp-id",
-        // Added Math.random() for better entropy in mock nullifier generation
         idkit_response: { mock: true, action: "register", timestamp: Date.now() + Math.random() },
-        role,
+        role: "worker",
       });
       router.push(redirectTo);
     } catch (err) {
@@ -93,14 +90,13 @@ export function RegisterWidget({
 
   if (isMock) {
     return (
-      <Button
-        size="lg"
+      <button
         onClick={handleMockRegister}
         disabled={registerMutation.isPending}
-        className="w-full"
+        className="w-full bg-blue-600 text-white font-mono font-bold text-sm tracking-widest px-4 py-3 rounded-xl hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {registerMutation.isPending ? "Registering…" : "Simulate Registration"}
-      </Button>
+        {registerMutation.isPending ? "VERIFYING…" : "SIMULATE WORLD ID →"}
+      </button>
     );
   }
 
@@ -115,7 +111,7 @@ export function RegisterWidget({
       await registerMutation.mutateAsync({
         rp_id: rpContext.rp_id,
         idkit_response: result,
-        role,
+        role: "worker",
       });
     } catch (err) {
       handleRegisterError(err);
@@ -132,18 +128,17 @@ export function RegisterWidget({
 
   return (
     <>
-      <Button
-        size="lg"
+      <button
         onClick={() => setOpen(true)}
         disabled={!canOpenWidget || registerMutation.isPending}
-        className="w-full"
+        className="w-full bg-blue-600 text-white font-mono font-bold text-sm tracking-widest px-4 py-3 rounded-xl hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {fetchError
-          ? "Error loading widget"
+          ? "ERROR — REFRESH"
           : rpContext
-          ? "Register with World ID"
-          : "Loading…"}
-      </Button>
+          ? "VERIFY WITH WORLD ID →"
+          : "LOADING…"}
+      </button>
 
       {canOpenWidget && (
         <IDKitRequestWidget

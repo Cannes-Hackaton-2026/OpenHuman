@@ -1,64 +1,217 @@
-import Link from "next/link";
+"use client";
 
-import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { trpc } from "@/lib/trpc/client";
+
+const CHECKER: (0 | 1)[] = [1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1];
+const CREAM = "#f0ebe0";
+const BLUE  = "#2563eb";
+const BLUE_LIGHT = "#3b82f6";
 
 export default function Home() {
+  const router = useRouter();
+  const { data: session, isLoading } = trpc.auth.me.useQuery();
+
+  useEffect(() => {
+    if (!isLoading && session) router.replace("/dashboard");
+  }, [session, isLoading, router]);
+
+  if (isLoading || session) return null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="flex flex-col items-center gap-10 text-center px-6 py-24 max-w-2xl">
-        <div className="flex flex-col items-center gap-4">
-          <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-            ETHGlobal Cannes 2026
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        height: "calc(100vh - 56px)",
+        background: "#000",
+        overflow: "hidden",
+      }}
+    >
+      {/* Orbe bleu — bas gauche */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          bottom: "-15%",
+          left: "-15%",
+          width: "70vw",
+          height: "70vw",
+          background: `radial-gradient(circle, rgba(37,99,235,0.6) 0%, rgba(37,99,235,0.25) 40%, transparent 70%)`,
+          filter: "blur(60px)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Barre info */}
+      <div style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "1.25rem 1.25rem 0" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.65rem 1.5rem",
+            border: `1px solid rgba(37,99,235,0.55)`,
+            borderRadius: "1rem",
+          }}
+        >
+          <span style={{ color: "#9ca3af", fontSize: "0.875rem", fontWeight: 300 }}>
+            Verified Human Marketplace
           </span>
-          <h1 className="text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            HumanProof
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-md leading-relaxed">
-            The first marketplace where every worker is a{" "}
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-              cryptographically verified human
+          <span style={{ color: BLUE_LIGHT, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "0.05em" }}>
+            ETHGlobal Cannes · 2026
+          </span>
+          <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+            openhuman.app
+          </span>
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 6vw",
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          {/* Ligne 1 */}
+          <div
+            style={{
+              fontSize: "clamp(3.5rem, 13.5vw, 15rem)",
+              fontWeight: 900,
+              color: CREAM,
+              letterSpacing: "-0.04em",
+              lineHeight: 0.9,
+              display: "block",
+            }}
+          >
+            Open
+          </div>
+
+          {/* Ligne 2 avec astérisque + damier */}
+          <div style={{ position: "relative", display: "inline-block", marginTop: "-0.04em" }}>
+            {/* Astérisque gauche */}
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                right: "100%",
+                top: 0,
+                transform: "translateY(-48%)",
+                fontSize: "clamp(2.5rem, 10vw, 11rem)",
+                fontWeight: 900,
+                color: BLUE,
+                lineHeight: 1,
+                paddingRight: "0.12em",
+                display: "block",
+                userSelect: "none",
+              }}
+            >
+              *
             </span>
-            . Powered by World ID 4.0.
-          </p>
-        </div>
 
-        <div className="flex w-full flex-col justify-center gap-4 sm:flex-row">
-          <Link
-            href="/register"
-            className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
-          >
-            I&apos;m a Worker
-          </Link>
-          <Link
-            href="/client/register"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "w-full sm:w-auto"
-            )}
-          >
-            I&apos;m a Client
-          </Link>
-        </div>
+            <span
+              style={{
+                fontSize: "clamp(3.5rem, 13.5vw, 15rem)",
+                fontWeight: 900,
+                color: CREAM,
+                letterSpacing: "-0.04em",
+                lineHeight: 0.9,
+                display: "block",
+              }}
+            >
+              Human.
+            </span>
 
-        <div className="grid grid-cols-3 gap-6 mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">🌍</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">World ID</span>
-            <span>Orb-verified humans only</span>
+            {/* Damier droit */}
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: "100%",
+                top: "50%",
+                transform: "translateY(-50%)",
+                paddingLeft: "0.35em",
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "clamp(4px, 0.5vw, 9px)",
+                userSelect: "none",
+              }}
+            >
+              {CHECKER.map((filled, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width:  "clamp(14px, 1.9vw, 30px)",
+                    height: "clamp(14px, 1.9vw, 30px)",
+                    background: filled ? BLUE : "transparent",
+                  }}
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">🤖</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">AgentKit</span>
-            <span>AI agents post tasks</span>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xl">⚡</span>
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">Hedera</span>
-            <span>Instant HBAR payments</span>
+
+          {/* CTAs */}
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "1.25rem", marginTop: "2.75rem" }}>
+            <Link
+              href="/register"
+              style={{
+                padding: "0.55rem 1.4rem",
+                border: `1px solid rgba(37,99,235,0.6)`,
+                borderRadius: "0.75rem",
+                color: "#60a5fa",
+                fontSize: "0.7rem",
+                fontFamily: "monospace",
+                letterSpacing: "0.18em",
+                textDecoration: "none",
+              }}
+            >
+              PROVE HUMANITY →
+            </Link>
+            <Link
+              href="/tasks"
+              style={{
+                color: "#6b7280",
+                fontSize: "0.7rem",
+                fontFamily: "monospace",
+                letterSpacing: "0.18em",
+                textDecoration: "none",
+              }}
+            >
+              BROWSE BOUNTIES
+            </Link>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Barre bas */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1rem 2rem",
+        }}
+      >
+        <span style={{ color: CREAM, fontSize: "0.875rem", fontWeight: 300 }}>Open Human</span>
+        <span style={{ color: "#374151", fontSize: "0.7rem", fontFamily: "monospace", letterSpacing: "0.12em" }} className="hidden sm:block">
+          WORLD ID · HEDERA · MCP 2.0
+        </span>
+        <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>ETH Global 2026</span>
+      </div>
     </div>
   );
 }
